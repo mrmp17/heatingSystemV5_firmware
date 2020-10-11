@@ -22,11 +22,13 @@
 #include "main.h"
 #include "adc.h"
 #include "comp.h"
+#include "dma.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Hardware.h"
 
 /* USER CODE END Includes */
 
@@ -89,6 +91,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC_Init();
   MX_COMP1_Init();
   MX_USART1_UART_Init();
