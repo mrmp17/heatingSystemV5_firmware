@@ -96,11 +96,8 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  hardware.set_charging(false);
-  hardware.set_vbat_sply(true);
-  HAL_GPIO_WritePin(HTR_SW_CTRL_GPIO_Port, HTR_SW_CTRL_Pin, GPIO_PIN_SET);
-  HAL_Delay(100);
-  hardware.start_ADC();
+
+  hardware.init();
 
   /* USER CODE END 2 */
 
@@ -115,6 +112,7 @@ int main(void)
     hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
     hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
     hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
+    hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
     hardware.debug_print("\n");
     HAL_Delay(100);
 

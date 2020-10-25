@@ -15,11 +15,24 @@
 #define ADC_REF 2500
 #define MCU_SPLY 2500
 #define ADC_VBAT_KOEF 2
-//ADC_buffer array indexes
 
+#define HTR_RESISTANCE 2800 //mOhm
+//ADC_buffer array indexes
 #define ADC_CC1 0
 #define ADC_CC2 1
 #define ADC_VBAT 2
+
+#define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
+#define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
+#define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
+
+//bat SOC definitions
+#define BAT_0to10 0
+#define BAT_10to40 1
+#define BAT_40to70 2
+#define BAT_70to100 3
+
+#define BAT_RINT 40 //internal resistance in miliohms
 
 
 
@@ -42,7 +55,7 @@ public:
     void stop_heating(); //disables heating output
     bool is_charging(); //checks if battery is charging
     uint8_t get_battery_state(); //returns estimated battery state. Valid values only: 0,33,66,99
-    bool high_cur_supply_detected(); //checks if 5V 3A type-C compatible power supply - charger is connected
+    bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
 
 
     //low level HW functions (used mostly by higher level functions in this class)
@@ -76,6 +89,8 @@ public:
 
 
 private:
+
+    const uint16_t soc_thr [3] = {3550, 3830, 4050}; //thresholds for 10%, 40%, 70% (NO LOAD)
 
 
 

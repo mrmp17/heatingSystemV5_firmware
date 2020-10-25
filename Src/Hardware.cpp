@@ -44,7 +44,7 @@ bool Hardware::is_pwr_mosfet_on() {
 
 void Hardware::start_ADC() {
   HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED); //calibrate ADC //todo: how long does this take?
-  HAL_ADC_Start_DMA(&hadc, ADC_buffer, 4);
+  HAL_ADC_Start_DMA(&hadc, ADC_buffer, 3);
 }
 
 void Hardware::stop_ADC() {
@@ -109,6 +109,34 @@ void Hardware::set_default_input_cur() {
 
 void Hardware::set_max_input_cur() {
   HAL_GPIO_WritePin(CH_ILIM_CTRL_GPIO_Port, CH_ILIM_CTRL_Pin, GPIO_PIN_RESET); //LOW (open drain pin)
+}
+
+bool Hardware::is_sply_5V3A() {
+  //source should be sourcing 330uA +- 8% on one CC pin. other CC pin should be near ground
+  //330uA +- 8%  on 5k1 Rd resistor is 1.515V to  1.818V
+  uint16_t CC1 = get_CC1_volt();
+  uint16_t CC2 = get_CC2_volt();
+  //return if CC pins are at correct voltage levels for 5V 3A supply
+  return (CC1 < V5V3A_LCC_MAX && (CC2 > V5V3A_HCC_MIN && CC2 < V5V3A_HCC_MAX)) || (CC2 < V5V3A_LCC_MAX && (CC1 > V5V3A_HCC_MIN && CC1 < V5V3A_HCC_MAX));
+}
+
+uint8_t Hardware::get_battery_state() {
+  uint16_t voltage = get_vbat();
+  if(is_charging()){ //battery is charging
+    //shit. current not known :( don't report state while charging, this is very imprecise
+    //todo: SOC lookup
+  }
+  else{ //battery is not charging
+    if(is_pwr_mosfet_on()){ //battery is loaded by the heater, compensate for internal resistance drop
+      uint16_t irdrop = (voltage / HTR_RESISTANCE)*BAT_RINT; //drop on battery internal resistance in mV
+      voltage = voltage + irdrop; // compensate for internal resistance drop
+      //todo: SOC lookup
+
+    }
+    else{ //battery is unloaded
+      //todo: SOC lookup
+    }
+  }
 }
 
 
