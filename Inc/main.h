@@ -64,8 +64,8 @@ void Error_Handler(void);
 #define CH_CE_GPIO_Port GPIOC
 #define FORCE_SNS_ANALOG_Pin GPIO_PIN_0
 #define FORCE_SNS_ANALOG_GPIO_Port GPIOA
-#define FORCE_SNS_SIG_Pin GPIO_PIN_1
-#define FORCE_SNS_SIG_GPIO_Port GPIOA
+#define BUTTON_Pin GPIO_PIN_1
+#define BUTTON_GPIO_Port GPIOA
 #define FORCE_SNS_PEN_Pin GPIO_PIN_2
 #define FORCE_SNS_PEN_GPIO_Port GPIOA
 #define USB_CC1_ANALOG_Pin GPIO_PIN_3

@@ -21,7 +21,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
-#include "comp.h"
 #include "dma.h"
 #include "usart.h"
 #include "gpio.h"
@@ -60,6 +59,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+Hardware hardware;
 
 /* USER CODE END 0 */
 
@@ -93,9 +93,14 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC_Init();
-  MX_COMP1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  hardware.set_charging(false);
+  hardware.set_vbat_sply(true);
+  HAL_GPIO_WritePin(HTR_SW_CTRL_GPIO_Port, HTR_SW_CTRL_Pin, GPIO_PIN_SET);
+  HAL_Delay(100);
+  hardware.start_ADC();
 
   /* USER CODE END 2 */
 
@@ -103,6 +108,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+    hardware.led_ctrl(1, hardware.get_button_state());
+    hardware.set_vbat_sply(true);
+    hardware.debug_print("vbat volt: %d\n", hardware.get_vbat());
+    hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
+    hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
+    hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
+    hardware.debug_print("\n");
+    HAL_Delay(100);
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
