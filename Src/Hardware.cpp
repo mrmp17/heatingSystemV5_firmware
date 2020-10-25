@@ -65,9 +65,6 @@ uint16_t Hardware::get_CC2_volt() {
   return ((ADC_buffer[ADC_CC2]*ADC_REF)/ADC_MAX_VAL); //return CC2 voltage in millivolts
 }
 
-uint16_t Hardware::get_fsns_votl() {
-  return ((ADC_buffer[ADC_FSNS]*ADC_REF)/ADC_MAX_VAL); //return force sensor voltage in millivolts
-}
 
 void Hardware::set_button_sply(bool state) {
   HAL_GPIO_WritePin(FORCE_SNS_PEN_GPIO_Port, FORCE_SNS_PEN_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
@@ -106,5 +103,12 @@ void Hardware::set_htr_det(bool state) {
   HAL_GPIO_WritePin(HTR_DETECT_GPIO_Port, HTR_DETECT_Pin, state ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
+void Hardware::set_default_input_cur() {
+  HAL_GPIO_WritePin(CH_ILIM_CTRL_GPIO_Port, CH_ILIM_CTRL_Pin, GPIO_PIN_SET); //FLOATING (open drain pin)
+}
+
+void Hardware::set_max_input_cur() {
+  HAL_GPIO_WritePin(CH_ILIM_CTRL_GPIO_Port, CH_ILIM_CTRL_Pin, GPIO_PIN_RESET); //LOW (open drain pin)
+}
 
 

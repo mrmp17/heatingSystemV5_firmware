@@ -16,10 +16,10 @@
 #define MCU_SPLY 2500
 #define ADC_VBAT_KOEF 2
 //ADC_buffer array indexes
-#define ADC_FSNS 0
-#define ADC_CC1 1
-#define ADC_CC2 2
-#define ADC_VBAT 3
+
+#define ADC_CC1 0
+#define ADC_CC2 1
+#define ADC_VBAT 2
 
 
 
@@ -41,8 +41,6 @@ public:
     bool set_heating(uint16_t value); //enables heating/sets heating power. returns false if heating is not possible
     void stop_heating(); //disables heating output
     bool is_charging(); //checks if battery is charging
-    void set_default_chrg_cur(); //sets default charging current ~1A
-    void set_max_chrg_cur(); //sets maximum charging current ~3A
     uint8_t get_battery_state(); //returns estimated battery state. Valid values only: 0,33,66,99
     bool high_cur_supply_detected(); //checks if 5V 3A type-C compatible power supply - charger is connected
 
@@ -51,7 +49,6 @@ public:
     void set_charging(bool state); //turns charging ON or OFF
     void set_pwr_mosfet(bool state); //heating mosfet low level controll
     void set_button_sply(bool state); //turns on/off button supply voltage (set to ON an forget - only HW rev 1.0)
-    uint16_t get_fsns_votl(); //gets force sensor voltage (NOT USED)
     uint16_t get_CC1_volt(); //gets CC1 pin voltage
     uint16_t get_CC2_volt(); //gets CC2 pin voltage
     uint16_t get_vbat(); //gets battery voltage
@@ -61,11 +58,13 @@ public:
     bool is_pwr_mosfet_on(); //check if power mosfet is connecting battery voltage to VBUS
     void set_htr_det(bool state); //enable or disable heater detect pullup resistor (NOT USED)
     bool get_button_state();
+    void set_default_input_cur(); //sets default VBUS input current limit ~1A
+    void set_max_input_cur(); //sets maximum VBUS input current limit ~3A
 
     uint32_t handler_counter = 0; //increments every time handler executes
 
 
-    uint32_t ADC_buffer[4] = {0}; //ADC buffer (filled by DMA)
+    uint32_t ADC_buffer[3] = {0}; //ADC buffer (filled by DMA)
 
 
 

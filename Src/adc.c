@@ -57,15 +57,8 @@ void MX_ADC_Init(void)
   }
   /** Configure for the selected ADC regular channel to be converted. 
   */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure for the selected ADC regular channel to be converted. 
-  */
   sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -101,12 +94,11 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
   
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**ADC GPIO Configuration    
-    PA0     ------> ADC_IN0
     PA3     ------> ADC_IN3
     PA4     ------> ADC_IN4
     PA5     ------> ADC_IN5 
     */
-    GPIO_InitStruct.Pin = FORCE_SNS_ANALOG_Pin|USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin;
+    GPIO_InitStruct.Pin = USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -150,12 +142,11 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     __HAL_RCC_ADC1_CLK_DISABLE();
   
     /**ADC GPIO Configuration    
-    PA0     ------> ADC_IN0
     PA3     ------> ADC_IN3
     PA4     ------> ADC_IN4
     PA5     ------> ADC_IN5 
     */
-    HAL_GPIO_DeInit(GPIOA, FORCE_SNS_ANALOG_Pin|USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin);
+    HAL_GPIO_DeInit(GPIOA, USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(adcHandle->DMA_Handle);
