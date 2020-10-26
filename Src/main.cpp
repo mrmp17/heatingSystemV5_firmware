@@ -113,6 +113,7 @@ int main(void)
     hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
     hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
     hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
+    hardware.debug_print("SOC: %d\n", hardware.get_SOC());
     hardware.debug_print("\n");
     HAL_Delay(100);
 

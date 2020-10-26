@@ -120,23 +120,49 @@ bool Hardware::is_sply_5V3A() {
   return (CC1 < V5V3A_LCC_MAX && (CC2 > V5V3A_HCC_MIN && CC2 < V5V3A_HCC_MAX)) || (CC2 < V5V3A_LCC_MAX && (CC1 > V5V3A_HCC_MIN && CC1 < V5V3A_HCC_MAX));
 }
 
-uint8_t Hardware::get_battery_state() {
-  uint16_t voltage = get_vbat();
-  if(is_charging()){ //battery is charging
-    //shit. current not known :( don't report state while charging, this is very imprecise
-    //todo: SOC lookup
-  }
-  else{ //battery is not charging
-    if(is_pwr_mosfet_on()){ //battery is loaded by the heater, compensate for internal resistance drop
-      uint16_t irdrop = (voltage / HTR_RESISTANCE)*BAT_RINT; //drop on battery internal resistance in mV
-      voltage = voltage + irdrop; // compensate for internal resistance drop
-      //todo: SOC lookup
+bool Hardware::is_charging() {
+  return false;
+  //todo: implement
+}
 
+uint8_t Hardware::get_SOC() {
+  static uint8_t soc = SOC_40to70; //persistent SOC variable
+  uint16_t voltage = get_vbat();
+
+  if(voltage <= soc_thr[3]){
+    soc = SOC_DEAD; //if battery falls below 2.8V, report battery dead
+  }
+
+  else{
+    if(soc == SOC_DEAD && voltage < soc_thr[4]) soc = SOC_DEAD; //return SOC_DEAD until battery reaches SOC_DEAD release voltage
+
+    else if(is_charging()){ //battery is charging
+      //shit. current (internal resistance voltage drop) not known :( don't report state while charging, this is very imprecise
+      if(voltage <  soc_thr[0]) soc = SOC_0to10;
+      else if(voltage <  soc_thr[1]) soc = SOC_10to40;
+      else if(voltage <  soc_thr[2]) soc = SOC_40to70;
+      else soc = SOC_70to100;
     }
-    else{ //battery is unloaded
-      //todo: SOC lookup
+    else{ //battery is not charging
+      if(is_pwr_mosfet_on()){ //battery is loaded by the heater, compensate for internal resistance drop
+        uint16_t irdrop = (((float)voltage / HTR_RESISTANCE)*BAT_RINT); //drop on battery internal resistance in mV
+        voltage = voltage + irdrop; // compensate for internal resistance drop
+        if(voltage <  soc_thr[0]) soc = SOC_0to10;
+        else if(voltage <  soc_thr[1]) soc = SOC_10to40;
+        else if(voltage <  soc_thr[2]) soc = SOC_40to70;
+        else soc = SOC_70to100;
+
+      }
+      else{ //battery is unloaded
+        if(voltage <  soc_thr[0]) soc = SOC_0to10;
+        else if(voltage <  soc_thr[1]) soc = SOC_10to40;
+        else if(voltage <  soc_thr[2]) soc = SOC_40to70;
+        else soc = SOC_70to100;
+      }
     }
   }
+
+  return soc;
 }
 
 
