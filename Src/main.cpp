@@ -98,6 +98,8 @@ int main(void)
 
 
   hardware.init();
+  //hardware.set_htr_det(true);
+  //hardware.set_pwr_mosfet(true);
 
   /* USER CODE END 2 */
 
@@ -114,6 +116,7 @@ int main(void)
     hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
     hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
     hardware.debug_print("SOC: %d\n", hardware.get_SOC());
+    hardware.debug_print("HTR present: %d\n", hardware.is_htr_connected());
     hardware.debug_print("\n");
     HAL_Delay(100);
 

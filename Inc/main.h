@@ -74,8 +74,8 @@ void Error_Handler(void);
 #define VBAT_SNS_GPIO_Port GPIOA
 #define VBAT_SNS_CTRL_Pin GPIO_PIN_6
 #define VBAT_SNS_CTRL_GPIO_Port GPIOA
-#define TEST_GPIO_Pin GPIO_PIN_7
-#define TEST_GPIO_GPIO_Port GPIOA
+#define HTR_DET_Pin GPIO_PIN_7
+#define HTR_DET_GPIO_Port GPIOA
 #define LD3_Pin GPIO_PIN_15
 #define LD3_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_3
@@ -86,8 +86,6 @@ void Error_Handler(void);
 #define CH_STAT_GPIO_Port GPIOB
 #define CH_PG_Pin GPIO_PIN_6
 #define CH_PG_GPIO_Port GPIOB
-#define HTR_DETECT_Pin GPIO_PIN_7
-#define HTR_DETECT_GPIO_Port GPIOB
 #define HTR_SW_CTRL_Pin GPIO_PIN_8
 #define HTR_SW_CTRL_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

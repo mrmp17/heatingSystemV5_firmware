@@ -100,7 +100,28 @@ void Hardware::set_charging(bool state) {
 }
 
 void Hardware::set_htr_det(bool state) {
-  HAL_GPIO_WritePin(HTR_DETECT_GPIO_Port, HTR_DETECT_Pin, state ? GPIO_PIN_RESET : GPIO_PIN_SET);
+  //this should switch  TEST_GPIO pin between HIGH an HIGH_Z (bodge connecting TEST_GPIO and CC2
+  //is_htr_connected() checks if this causes voltage on CC1 pin and measures resistance CC2-CC1
+  if(state){
+    HAL_GPIO_WritePin(HTR_DET_GPIO_Port, HTR_DET_Pin, GPIO_PIN_SET); //set to high
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = HTR_DET_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(HTR_DET_GPIO_Port, &GPIO_InitStruct); //enable output mode
+  }
+  else{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = HTR_DET_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(HTR_DET_GPIO_Port, &GPIO_InitStruct); //enable analog mode (high Z)
+  }
+  htr_det_state = state; //save current state
+
+  //TODO
 }
 
 void Hardware::set_default_input_cur() {
@@ -163,6 +184,19 @@ uint8_t Hardware::get_SOC() {
   }
 
   return soc;
+}
+
+bool Hardware::is_htr_connected() {
+  if(!htr_det_state){
+    return false; //return false if detection circuit is not ON
+    //can not detect heater without tetection circuit
+  }
+  //CC2 pin is hard pulled up. should be around 2500mV
+  //CC1 is mid of divider |2V5 -- 10K -- CC1 -- 5K1 -- GND| if heater is connected
+  //voltage should be around 844mV if connected, around 0 if not. (added +-8% tolerance)
+  uint16_t cc1 = get_CC1_volt();
+  uint16_t cc2 = get_CC2_volt();
+  return (cc2 > 2400 && (cc1 > 780 && cc1 < 910)); //todo: test if range is to small
 }
 
 

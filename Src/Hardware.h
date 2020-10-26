@@ -51,9 +51,8 @@ public:
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
     uint8_t chrg_stat(); //gets charger status (see status defines)
-    bool htr_connected(); //checks if heater cable is connected
+    bool is_htr_connected(); //checks if heater cable is connected
     bool set_heating(uint16_t value); //enables heating/sets heating power. returns false if heating is not possible
-    void stop_heating(); //disables heating output
     bool is_charging(); //checks if battery is charging
     uint8_t get_SOC(); //returns estimated battery state. Valid values only: 0,33,66,99
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
@@ -92,7 +91,7 @@ public:
 private:
 
     const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
-
+    bool htr_det_state = 0; //keeps state of heater detect functionality
 
 
 };
