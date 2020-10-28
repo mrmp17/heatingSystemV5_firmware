@@ -96,10 +96,15 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_Delay(3000);
 
   hardware.init();
-  //hardware.set_htr_det(true);
   //hardware.set_pwr_mosfet(true);
+
+  //hardware.debug_print("sleep :)\n");
+  //hardware.sleep();
+  //hardware.debug_print("wakeup :(\n");
+
 
   /* USER CODE END 2 */
 
@@ -107,16 +112,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    //TODO: check clock config at next cubemx update
+    static uint32_t timing = 0;
+
+    if(HAL_GetTick() - timing >= 50 && false){ //50ms event
+      timing = HAL_GetTick();
+      hardware.soft_pwm_handler();
+    }
+
+    hardware.set_max_input_cur();
+    //hardware.set_default_input_cur();
+
+    hardware.set_charging(true);
 
     hardware.led_ctrl(1, hardware.get_button_state());
     hardware.set_vbat_sply(true);
     hardware.debug_print("vbat volt: %d\n", hardware.get_vbat());
-    hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
-    hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
+//    hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
+//    hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
     hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
-    hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
-    hardware.debug_print("SOC: %d\n", hardware.get_SOC());
-    hardware.debug_print("HTR present: %d\n", hardware.is_htr_connected());
+//    hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
+//    hardware.debug_print("SOC: %d\n", hardware.get_SOC());
+//    hardware.debug_print("HTR present: %d\n", hardware.is_htr_connected());
+//    hardware.debug_print("rel htr pwr: %d\n", hardware.rel_htr_pwr(HEAT_MAX));
     hardware.debug_print("\n");
     HAL_Delay(100);
 
@@ -146,7 +164,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
-  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {

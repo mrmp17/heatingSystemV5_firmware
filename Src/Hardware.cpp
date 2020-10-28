@@ -199,4 +199,106 @@ bool Hardware::is_htr_connected() {
   return (cc2 > 2400 && (cc1 > 780 && cc1 < 910)); //todo: test if range is to small
 }
 
+uint16_t Hardware::rel_htr_pwr(uint16_t power_mw) {
+  float vbat = get_vbat();
+  float maxPower = (vbat*vbat)/HTR_RESISTANCE; //U^2 / R
+  float k = power_mw/maxPower;
+  if(k >= 1){ //set to 100% if requested power is higher than max power.
+    //debug_print("cant provide requested power.\n");
+    return 100;
+  }
+  else return (uint16_t)(k*100);
+}
+
+void Hardware::set_heating(uint16_t pwr_percent) {
+  current_htr_pwr = pwr_percent;
+}
+
+void Hardware::soft_pwm_handler() {
+  static uint8_t cnt = 0;
+
+  if(current_htr_pwr == 0){
+    set_pwr_mosfet(false);
+    cnt = 0; //reset counter so it starts at 0 at next turn-on
+  }
+  else{
+    if(cnt < current_htr_pwr){
+      set_pwr_mosfet(true);
+      //led_ctrl(3, true);
+    }
+    else{
+      set_pwr_mosfet(false);
+      //led_ctrl(3, false);
+    }
+
+    //ramp generator
+    if(cnt < 100){
+      cnt++;
+    }
+    else{
+      cnt = 0;
+    }
+  }
+}
+
+void Hardware::sleep() {
+  //disable all power hungry peripherals and enter sleep
+  //TODO: check if other stuff needs to be turned off
+  stop_ADC(); //stop ADC/DMA
+  set_vbat_sply(false); //disable vbat divider supply
+  set_charging(true); //enable charging to prevent CE pulldown drain
+  HAL_SuspendTick(); //suspend tick to prevent tick interrupts
+  HAL_PWR_DisableSleepOnExit(); //disable sleeping after exiting interrupt that caused wake-up
+  HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+
+  //sleeping
+  //wake up
+
+
+  //configure clocks
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Initializes the CPU, AHB and APB busses clocks
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
+  RCC_OscInitStruct.MSICalibrationValue = 0;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB busses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  //end clock configuration
+
+
+  set_vbat_sply(true); //enable vbat divider supply
+  start_ADC();
+  set_charging(false);  //TODO: is this ok?
+}
+
 

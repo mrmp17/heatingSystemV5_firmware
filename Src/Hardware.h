@@ -35,6 +35,12 @@
 
 #define BAT_RINT 50 //internal resistance in miliohms
 
+//heating power defines
+#define HEAT_LOW 1500 //mW
+#define HEAT_MID 2000 //mW
+#define HEAT_HIGH 2600 //mW
+#define HEAT_MAX 3500 //mW use only to preheat. not possible at low battery voltages
+
 
 
 class Hardware {
@@ -46,16 +52,19 @@ public:
 
     void debug_print(const char *format, ...);
 
-    void handler(); //call this every 10ms
+    void main_handler(); //call this every x ms
+    void soft_pwm_handler(); //call this in handler
 
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
     uint8_t chrg_stat(); //gets charger status (see status defines)
     bool is_htr_connected(); //checks if heater cable is connected
-    bool set_heating(uint16_t value); //enables heating/sets heating power. returns false if heating is not possible
+    void set_heating(uint16_t value); //enables heating/sets heating power.
     bool is_charging(); //checks if battery is charging
-    uint8_t get_SOC(); //returns estimated battery state. Valid values only: 0,33,66,99
+    uint8_t get_SOC(); //returns estimated battery state. see SOC_xtoy defines
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
+
+    void sleep(); //prepare and enter sleep, configures after sleep
 
 
     //low level HW functions (used mostly by higher level functions in this class)
@@ -73,6 +82,7 @@ public:
     bool get_button_state();
     void set_default_input_cur(); //sets default VBUS input current limit ~1A
     void set_max_input_cur(); //sets maximum VBUS input current limit ~3A
+    uint16_t rel_htr_pwr(uint16_t power_mw); //returns relative heater power in %, required to get requested power ouptut
 
     uint32_t handler_counter = 0; //increments every time handler executes
 
@@ -91,7 +101,8 @@ public:
 private:
 
     const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
-    bool htr_det_state = 0; //keeps state of heater detect functionality
+    bool htr_det_state = false; //keeps state of heater detect functionality
+    uint16_t current_htr_pwr = 0;
 
 
 };
