@@ -22,6 +22,7 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
+#include "rtc.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -94,15 +95,27 @@ int main(void)
   MX_DMA_Init();
   MX_ADC_Init();
   MX_USART1_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_Delay(3000);
 
   hardware.init();
-  //hardware.set_pwr_mosfet(true);
-
+  hardware.led_ctrl(2, true);
+  HAL_Delay(10);
+  hardware.led_ctrl(2, false);
+  HAL_Delay(1000);
   //hardware.debug_print("sleep :)\n");
-  //hardware.sleep();
+  hardware.sleep();
+  hardware.led_ctrl(3, true);
+  HAL_Delay(2000);
+  hardware.led_ctrl(3, false);
+  hardware.led_ctrl(2, true);
+  HAL_Delay(10);
+  hardware.led_ctrl(2, false);
+  hardware.sleep();
+  hardware.led_ctrl(3, true);
+
   //hardware.debug_print("wakeup :(\n");
 
 
@@ -120,22 +133,21 @@ int main(void)
       hardware.soft_pwm_handler();
     }
 
-    hardware.set_max_input_cur();
+    //hardware.set_max_input_cur();
     //hardware.set_default_input_cur();
 
-    hardware.set_charging(true);
+    //hardware.set_charging(true);
 
     hardware.led_ctrl(1, hardware.get_button_state());
-    hardware.set_vbat_sply(true);
-    hardware.debug_print("vbat volt: %d\n", hardware.get_vbat());
+    //hardware.debug_print("vbat volt: %d\n", hardware.get_vbat());
 //    hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
 //    hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
-    hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
+    //hardware.debug_print("VBUS ok: %d\n", hardware.chrg_pgd());
 //    hardware.debug_print("5V3A det: %d\n", hardware.is_sply_5V3A());
 //    hardware.debug_print("SOC: %d\n", hardware.get_SOC());
 //    hardware.debug_print("HTR present: %d\n", hardware.is_htr_connected());
 //    hardware.debug_print("rel htr pwr: %d\n", hardware.rel_htr_pwr(HEAT_MAX));
-    hardware.debug_print("\n");
+    //hardware.debug_print("\n");
     HAL_Delay(100);
 
 
@@ -161,7 +173,8 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
@@ -183,8 +196,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_RTC;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();

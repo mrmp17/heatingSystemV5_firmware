@@ -247,7 +247,11 @@ void Hardware::sleep() {
   stop_ADC(); //stop ADC/DMA
   set_vbat_sply(false); //disable vbat divider supply
   set_charging(true); //enable charging to prevent CE pulldown drain
+  //enable RTC timer
+  uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
+  HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, sleepTime, RTC_WAKEUPCLOCK_RTCCLK_DIV16); //set rtc interrupt for RTC_WAKE_TIME ms
   HAL_SuspendTick(); //suspend tick to prevent tick interrupts
+  HAL_PWREx_EnableUltraLowPower();
   HAL_PWR_DisableSleepOnExit(); //disable sleeping after exiting interrupt that caused wake-up
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
 
@@ -255,6 +259,14 @@ void Hardware::sleep() {
   //wake up
 
 
+  config_clk_wake();
+  HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+  set_vbat_sply(true); //enable vbat divider supply
+  start_ADC();
+  set_charging(false);  //TODO: is this ok?
+}
+
+void Hardware::config_clk_wake() {
   //configure clocks
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -265,7 +277,8 @@ void Hardware::sleep() {
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
@@ -287,18 +300,93 @@ void Hardware::sleep() {
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_RTC;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
   //end clock configuration
+}
 
+void Hardware::config_gpio_slp() {
+  //set pins to analog mode to reduce power consumption (digital input stage disabled in this mode)
+  //todo: what to do with usart and swd pins?
 
-  set_vbat_sply(true); //enable vbat divider supply
-  start_ADC();
-  set_charging(false);  //TODO: is this ok?
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  //port C
+  GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = CH_ILIM_CTRL_Pin | CH_CE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  //port A
+  GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = USB_CC1_ANALOG_Pin | USB_CC2_ANALOG_Pin | VBAT_SNS_Pin | VBAT_SNS_CTRL_Pin | HTR_DET_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  //port B
+  GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = CH_STAT_Pin | CH_PG_Pin | HTR_SW_CTRL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+}
+
+void Hardware::config_gpio_wake() {
+  //set gpios back to normal state
+  MX_GPIO_Init();
+}
+
+void Hardware::chrg_stat_handler() {
+  //todo: test
+  //detects if charger reports:
+  // - charging complete / sleep: pin HIGH
+  // - charging in progress: pin LOW
+  // - charging suspended: pin BLINKING 1Hz
+  static uint32_t lastEdgeTime = 0;
+  static bool lastState = false;
+  static const uint32_t errorInterval = 1000;
+  static uint32_t blinkCounter = 0; //counts valid on-after-another blinks
+
+  bool state = HAL_GPIO_ReadPin(CH_STAT_GPIO_Port, CH_STAT_Pin) ? true : false;
+  if(state != lastState){ // edge event
+    uint32_t time = HAL_GetTick();
+    uint32_t timeFromLast = time - lastEdgeTime;
+    if(timeFromLast > errorInterval-50 && timeFromLast < errorInterval+50){ //1 second from last edge
+      blinkCounter++;
+    }
+    else{
+      blinkCounter = 0; //last edge was not 1 second ago, reset blinkCounter
+    }
+    if(blinkCounter > 2){
+      chrg_stat_ = CHRG_STAT_ERROR;
+    }
+    else if(state == true){
+      chrg_stat_ = CHRG_STAT_IDLE;
+    }
+    else if(state == false){
+      chrg_stat_ = CHRG_STAT_CHARGING;
+    }
+    lastEdgeTime = time; //save time
+    lastState = state; //save state
+  }
+  else if(HAL_GetTick()-lastEdgeTime > 1500){
+    if(state == true){
+      chrg_stat_ = CHRG_STAT_IDLE;
+    }
+    else if(state == false){
+      chrg_stat_ = CHRG_STAT_CHARGING;
+    }
+    lastEdgeTime = HAL_GetTick();
+    lastState = state;
+  }
 }
 
 

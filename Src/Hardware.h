@@ -10,6 +10,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "adc.h"
+#include "gpio.h"
+#include "rtc.h"
 
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
@@ -35,6 +37,15 @@
 
 #define BAT_RINT 50 //internal resistance in miliohms
 
+#define WAKE_SOURCE_BUTTON 0
+#define WAKE_SOURCE_RTC 1
+#define RTC_TICKS_PER_S 2313
+#define RTC_WAKE_TIME 4000
+
+#define CHRG_STAT_IDLE 0
+#define CHRG_STAT_CHARGING 1
+#define CHRG_STAT_ERROR 2
+
 //heating power defines
 #define HEAT_LOW 1500 //mW
 #define HEAT_MID 2000 //mW
@@ -54,6 +65,7 @@ public:
 
     void main_handler(); //call this every x ms
     void soft_pwm_handler(); //call this in handler
+    void chrg_stat_handler();
 
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
@@ -65,6 +77,7 @@ public:
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
 
     void sleep(); //prepare and enter sleep, configures after sleep
+    uint8_t wake_source(); //returns wake-up source
 
 
     //low level HW functions (used mostly by higher level functions in this class)
@@ -83,6 +96,10 @@ public:
     void set_default_input_cur(); //sets default VBUS input current limit ~1A
     void set_max_input_cur(); //sets maximum VBUS input current limit ~3A
     uint16_t rel_htr_pwr(uint16_t power_mw); //returns relative heater power in %, required to get requested power ouptut
+
+    void config_clk_wake();
+    void config_gpio_slp(); //not used currently
+    void config_gpio_wake(); //not used currently
 
     uint32_t handler_counter = 0; //increments every time handler executes
 
@@ -103,6 +120,7 @@ private:
     const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
     bool htr_det_state = false; //keeps state of heater detect functionality
     uint16_t current_htr_pwr = 0;
+    uint8_t chrg_stat_ = 0;
 
 
 };
