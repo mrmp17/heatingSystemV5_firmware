@@ -100,21 +100,21 @@ int main(void)
 
   HAL_Delay(3000);
 
-  hardware.init();
-  hardware.led_ctrl(2, true);
-  HAL_Delay(10);
-  hardware.led_ctrl(2, false);
-  HAL_Delay(1000);
-  //hardware.debug_print("sleep :)\n");
-  hardware.sleep();
-  hardware.led_ctrl(3, true);
-  HAL_Delay(2000);
-  hardware.led_ctrl(3, false);
-  hardware.led_ctrl(2, true);
-  HAL_Delay(10);
-  hardware.led_ctrl(2, false);
-  hardware.sleep();
-  hardware.led_ctrl(3, true);
+//  hardware.init();
+//  hardware.led_ctrl(2, true);
+//  HAL_Delay(10);
+//  hardware.led_ctrl(2, false);
+//  HAL_Delay(1000);
+//  //hardware.debug_print("sleep :)\n");
+//  hardware.sleep();
+//  hardware.led_ctrl(3, true);
+//  HAL_Delay(2000);
+//  hardware.led_ctrl(3, false);
+//  hardware.led_ctrl(2, true);
+//  HAL_Delay(10);
+//  hardware.led_ctrl(2, false);
+//  hardware.sleep();
+//  hardware.led_ctrl(3, true);
 
   //hardware.debug_print("wakeup :(\n");
 
@@ -127,18 +127,36 @@ int main(void)
   {
     //TODO: check clock config at next cubemx update
     static uint32_t timing = 0;
+    static uint32_t cnt = 0;
 
-    if(HAL_GetTick() - timing >= 50 && false){ //50ms event
+    if(HAL_GetTick() - timing >= 10 && true){ //50ms event
       timing = HAL_GetTick();
-      hardware.soft_pwm_handler();
+      cnt++;
+      hardware.button_handler(false);
     }
+
+    if(hardware.is_button_shortpress()){
+      hardware.debug_print("short\n");
+    }
+    if(hardware.is_button_longpress()){
+      hardware.debug_print("long\n");
+    }
+
+    if(cnt >= 1000){
+      cnt = 0;
+      hardware.led_ctrl(2, true);
+      hardware.sleep();
+      hardware.led_ctrl(2, false);
+      hardware.button_handler(true); //handler with reset
+    }
+
 
     //hardware.set_max_input_cur();
     //hardware.set_default_input_cur();
 
     //hardware.set_charging(true);
 
-    hardware.led_ctrl(1, hardware.get_button_state());
+    //hardware.led_ctrl(1, hardware.get_button_state());
     //hardware.debug_print("vbat volt: %d\n", hardware.get_vbat());
 //    hardware.debug_print("cc1 volt: %d\n", hardware.get_CC1_volt());
 //    hardware.debug_print("cc2 volt: %d\n", hardware.get_CC2_volt());
@@ -148,7 +166,7 @@ int main(void)
 //    hardware.debug_print("HTR present: %d\n", hardware.is_htr_connected());
 //    hardware.debug_print("rel htr pwr: %d\n", hardware.rel_htr_pwr(HEAT_MAX));
     //hardware.debug_print("\n");
-    HAL_Delay(100);
+    //HAL_Delay(100);
 
 
     /* USER CODE END WHILE */

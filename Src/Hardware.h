@@ -13,6 +13,8 @@
 #include "gpio.h"
 #include "rtc.h"
 
+#define HANDLER_PERIOD 20;
+
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
 #define MCU_SPLY 2500
@@ -52,6 +54,11 @@
 #define HEAT_HIGH 2600 //mW
 #define HEAT_MAX 3500 //mW use only to preheat. not possible at low battery voltages
 
+//cycles correspond to time between handler calls
+#define BUTTON_DBOUNCE_CYCLES 2
+#define BUTTON_SHORPTESS_CYCLES 5
+#define BUTTON_LONGPRESS_CYCLES 100
+
 
 
 class Hardware {
@@ -63,9 +70,11 @@ public:
 
     void debug_print(const char *format, ...);
 
+    //reset parameter in handlers resets state machines and timing variables. Call handlers with reset=1 right after wake-up from sleep
     void main_handler(); //call this every x ms
-    void soft_pwm_handler(); //call this in handler
-    void chrg_stat_handler();
+    void soft_pwm_handler(bool reset); //call this in handler
+    void chrg_stat_handler(bool reset);
+    void button_handler(bool reset);
 
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
@@ -75,6 +84,8 @@ public:
     bool is_charging(); //checks if battery is charging
     uint8_t get_SOC(); //returns estimated battery state. see SOC_xtoy defines
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
+    bool is_button_longpress(); //returns longpress flag and clears it
+    bool is_button_shortpress(); //returns longpress flag and clears it
 
     void sleep(); //prepare and enter sleep, configures after sleep
     uint8_t wake_source(); //returns wake-up source
@@ -114,13 +125,15 @@ public:
 
 
 
-
 private:
 
     const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
     bool htr_det_state = false; //keeps state of heater detect functionality
     uint16_t current_htr_pwr = 0;
     uint8_t chrg_stat_ = 0;
+    bool shortPressFlag = false;
+    bool longPressFlag = false;
+    bool buttonDebouncedState = false;
 
 
 };

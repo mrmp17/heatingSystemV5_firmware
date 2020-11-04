@@ -214,8 +214,12 @@ void Hardware::set_heating(uint16_t pwr_percent) {
   current_htr_pwr = pwr_percent;
 }
 
-void Hardware::soft_pwm_handler() {
+void Hardware::soft_pwm_handler(bool reset) {
   static uint8_t cnt = 0;
+
+  if(reset){ //reset cunter ramp
+    cnt = 0;
+  }
 
   if(current_htr_pwr == 0){
     set_pwr_mosfet(false);
@@ -244,6 +248,10 @@ void Hardware::soft_pwm_handler() {
 void Hardware::sleep() {
   //disable all power hungry peripherals and enter sleep
   //TODO: check if other stuff needs to be turned off
+  //just in case, set heating to OFF and call handler to make sure heating gets disabled
+  set_heating(0);
+  soft_pwm_handler(false);
+
   stop_ADC(); //stop ADC/DMA
   set_vbat_sply(false); //disable vbat divider supply
   set_charging(true); //enable charging to prevent CE pulldown drain
@@ -264,6 +272,8 @@ void Hardware::sleep() {
   set_vbat_sply(true); //enable vbat divider supply
   start_ADC();
   set_charging(false);  //TODO: is this ok?
+  button_handler(true); //call handler with reset param
+
 }
 
 void Hardware::config_clk_wake() {
@@ -344,7 +354,7 @@ void Hardware::config_gpio_wake() {
   MX_GPIO_Init();
 }
 
-void Hardware::chrg_stat_handler() {
+void Hardware::chrg_stat_handler(bool reset) {
   //todo: test
   //detects if charger reports:
   // - charging complete / sleep: pin HIGH
@@ -354,6 +364,12 @@ void Hardware::chrg_stat_handler() {
   static bool lastState = false;
   static const uint32_t errorInterval = 1000;
   static uint32_t blinkCounter = 0; //counts valid on-after-another blinks
+
+  if(reset){ //resets timing and blink counter
+    lastEdgeTime = 0;
+    lastState = false;
+    blinkCounter = 0;
+  }
 
   bool state = HAL_GPIO_ReadPin(CH_STAT_GPIO_Port, CH_STAT_Pin) ? true : false;
   if(state != lastState){ // edge event
@@ -387,6 +403,79 @@ void Hardware::chrg_stat_handler() {
     lastEdgeTime = HAL_GetTick();
     lastState = state;
   }
+}
+
+uint8_t Hardware::chrg_stat() {
+  return chrg_stat_;
+}
+
+void Hardware::button_handler(bool reset) {
+  static uint8_t loopCtrl = 0;
+  static uint32_t counter = 0;
+
+  if(reset){
+    counter = 0;
+    //TODO
+    //if button is being held down before sleep, we don't want long press flag after longpress duration after sleep every time MCU wakes up
+    loopCtrl = 0;
+  }
+
+  switch(loopCtrl){
+    case 0: //waiting for button press
+      if(get_button_state()){ //is button pressed?
+        counter = 0;
+        loopCtrl = 1;
+      }
+      break;
+    case 1: //waiting for debounce period
+      if(counter >= BUTTON_DBOUNCE_CYCLES){
+        if(get_button_state()){ //button still pressed after debounce time
+          buttonDebouncedState = true;
+          loopCtrl = 2; //go wait for short press time
+        }
+        else{ //button is not pressed anymore
+          buttonDebouncedState = false;
+          loopCtrl = 0; //go back to state 0
+        }
+      }
+      break;
+    case 2: //button is pressed, waiting for short and long press
+      if(!get_button_state()){ //button released
+        if(counter >= BUTTON_SHORPTESS_CYCLES){ //button was pressed for correct time to trigger short press event
+          shortPressFlag = true;
+        }
+        buttonDebouncedState = false;
+        loopCtrl = 0; //go back to state 0
+      }
+      else if(counter >= BUTTON_LONGPRESS_CYCLES){
+        longPressFlag = true;
+        loopCtrl = 3;
+      }
+      break;
+
+    case 3: //waiting for button release after long press duration
+      if(!get_button_state()){ //go to state 0 when button released
+        loopCtrl = 0;
+      }
+      break;
+  }
+  counter++;
+}
+
+bool Hardware::is_button_shortpress() {
+  if(shortPressFlag){
+    shortPressFlag = false;
+    return true;
+  }
+  else return false;
+}
+
+bool Hardware::is_button_longpress() {
+  if(longPressFlag){
+    longPressFlag = false;
+    return true;
+  }
+  else return false;
 }
 
 
