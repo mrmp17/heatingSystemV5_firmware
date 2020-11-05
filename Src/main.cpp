@@ -49,6 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+bool pcintFlag = false;
 
 /* USER CODE END PV */
 
@@ -60,7 +61,13 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-Hardware hardware;
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+  if(GPIO_Pin == BUTTON_Pin){
+    pcintFlag = true;
+  }
+}
+
+Hardware hardware(&pcintFlag);
 
 /* USER CODE END 0 */
 
@@ -148,6 +155,12 @@ int main(void)
       hardware.sleep();
       hardware.led_ctrl(2, false);
       hardware.button_handler(true); //handler with reset
+      if(hardware.wake_source() == WAKE_SOURCE_RTC){
+        hardware.debug_print("RTC wakeup\n");
+      }
+      if(hardware.wake_source() == WAKE_SOURCE_BTN){
+        hardware.debug_print("BTN wakeup\n");
+      }
     }
 
 

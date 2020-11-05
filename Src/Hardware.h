@@ -39,7 +39,7 @@
 
 #define BAT_RINT 50 //internal resistance in miliohms
 
-#define WAKE_SOURCE_BUTTON 0
+#define WAKE_SOURCE_BTN 0
 #define WAKE_SOURCE_RTC 1
 #define RTC_TICKS_PER_S 2313
 #define RTC_WAKE_TIME 4000
@@ -64,7 +64,9 @@
 class Hardware {
 
 public:
-    Hardware();
+    Hardware(bool *btn_interrupt_flag_pointer);
+
+
     void init(); //initializes hardware
 
 
@@ -134,6 +136,8 @@ private:
     bool shortPressFlag = false;
     bool longPressFlag = false;
     bool buttonDebouncedState = false;
+    bool *btn_int_flag_pointer;
+    uint8_t wakeup_src = 0;
 
 
 };

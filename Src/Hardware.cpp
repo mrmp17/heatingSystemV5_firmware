@@ -6,7 +6,9 @@
 #include "Hardware.h"
 
 
-Hardware::Hardware() {}
+Hardware::Hardware(bool *btn_interrupt_flag_pointer) {
+  btn_int_flag_pointer = btn_interrupt_flag_pointer;
+}
 
 
 void Hardware::debug_print(const char *format, ...){
@@ -258,6 +260,7 @@ void Hardware::sleep() {
   //enable RTC timer
   uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
   HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, sleepTime, RTC_WAKEUPCLOCK_RTCCLK_DIV16); //set rtc interrupt for RTC_WAKE_TIME ms
+  *btn_int_flag_pointer = false; //this flag could be set if button was pressed while not sleeping
   HAL_SuspendTick(); //suspend tick to prevent tick interrupts
   HAL_PWREx_EnableUltraLowPower();
   HAL_PWR_DisableSleepOnExit(); //disable sleeping after exiting interrupt that caused wake-up
@@ -271,7 +274,14 @@ void Hardware::sleep() {
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
   set_vbat_sply(true); //enable vbat divider supply
   start_ADC();
-  set_charging(false);  //TODO: is this ok?
+  if(*btn_int_flag_pointer){
+    wakeup_src = WAKE_SOURCE_BTN;
+  }
+  else{
+    wakeup_src = WAKE_SOURCE_RTC;
+  }
+  *btn_int_flag_pointer = false;
+  //set_charging(false);  //TODO: is this ok?
   button_handler(true); //call handler with reset param
 
 }
@@ -476,6 +486,10 @@ bool Hardware::is_button_longpress() {
     return true;
   }
   else return false;
+}
+
+uint8_t Hardware::wake_source() {
+  return wakeup_src;
 }
 
 
