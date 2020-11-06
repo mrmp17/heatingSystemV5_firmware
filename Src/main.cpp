@@ -69,6 +69,250 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 Hardware hardware(&pcintFlag);
 
+
+void stateMachine(){
+  static uint16_t loopCtrl = 0;
+  static uint16_t stateTransitionTime = 0;
+
+  switch(loopCtrl){
+    case 0: //main inactive/sleep state
+      // state actions:       #####
+      hardware.sleep();
+
+      // state flowControl    #####
+      if(hardware.wake_source() == WAKE_SOURCE_RTC){
+        loopCtrl = 1;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.wake_source() == WAKE_SOURCE_BTN){
+        loopCtrl = 2;
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+
+
+    case 1: //wakeup from RTC state
+      // state actions:       #####
+
+      // state flowControl    #####
+      if(hardware.chrg_pgd()){ //is charger connected?
+        hardware.set_charging(true);
+        loopCtrl = 11;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.get_SOC() == SOC_DEAD){
+        loopCtrl = 3; //to low bat sleep
+        stateTransitionTime = HAL_GetTick();
+      }
+      else{
+        loopCtrl = 0; //back to normal sleep
+        stateTransitionTime = HAL_GetTick();
+      }
+
+      break;
+
+
+    case 2: //wakeup from button state
+      // state actions:       #####
+
+      // state flowControl    #####
+      if(hardware.chrg_pgd()){
+        loopCtrl = 11; //go charging
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.get_SOC() == SOC_DEAD){
+        loopCtrl = 6;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(HAL_GetTick() - stateTransitionTime > WAIT_LONGPRESS){ //longpress should have happened by now, going back to sleep
+        loopCtrl = 0;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_shortpress()){
+        loopCtrl = 10; //display battery SOC and go to sleep if short press
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_longpress()){
+        loopCtrl = 4; //blink SOC and go to heating
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+
+
+    case 3: //battery dead sleep state
+      // state actions:       #####
+      hardware.sleep();
+      //todo: further reduce power consumption
+
+      // state flowControl    #####
+      if(hardware.wake_source() == WAKE_SOURCE_RTC){
+        loopCtrl = 1;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.wake_source() == WAKE_SOURCE_BTN){
+        loopCtrl = 2;
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+
+      //TODO: indicator functions needed
+    case 4: //blink battery and go to heating stuff
+      // state actions:       #####
+
+      // state flowControl    #####
+      loopCtrl = 13;
+      stateTransitionTime = HAL_GetTick();
+
+      break;
+    case 5:
+      // state actions:       #####
+
+      // state flowControl    #####
+      if(hardware.is_htr_connected()){
+        loopCtrl = 8; //go to medium heating
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_port_empty()){
+        if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
+          loopCtrl = 10;
+          hardware.set_htr_det(false);
+          stateTransitionTime = HAL_GetTick();
+        }
+        //else nothing to do, just wait
+      }
+      else{
+        //something that is not heater is connected, ABORT
+        hardware.set_htr_det(false);
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+
+      //TODO: indicator functions needed
+    case 6:
+      // state actions:       #####
+
+      // state flowControl    #####
+      loopCtrl = 3;
+      stateTransitionTime = HAL_GetTick();
+
+      break;
+
+
+    case 7: //low heating
+      // state actions:       #####
+      hardware.set_heating(hardware.rel_htr_pwr(HEAT_LOW));
+      //todo: update indicator;
+
+      // state flowControl    #####
+      if(hardware.get_SOC() == SOC_DEAD){
+        loopCtrl = 6;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(!hardware.is_htr_connected()){
+        loopCtrl = 5;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_shortpress()){
+        loopCtrl = 8;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_longpress()){
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+
+
+    case 8: //medium heating
+      // state actions:       #####
+      hardware.set_heating(hardware.rel_htr_pwr(HEAT_MED));
+      //todo: update indicator;
+
+      // state flowControl    #####
+      if(hardware.get_SOC() == SOC_DEAD){
+        loopCtrl = 6;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(!hardware.is_htr_connected()){
+        loopCtrl = 5;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_shortpress()){
+        loopCtrl = 9;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_longpress()){
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+      }
+
+      break;
+
+
+    case 9: //high heating
+      // state actions:       #####
+      hardware.set_heating(hardware.rel_htr_pwr(HEAT_HIGH));
+      //todo: update indicator;
+
+      // state flowControl    #####
+      if(hardware.get_SOC() == SOC_DEAD){
+        loopCtrl = 6;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(!hardware.is_htr_connected()){
+        loopCtrl = 5;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_shortpress()){
+        loopCtrl = 7;
+        stateTransitionTime = HAL_GetTick();
+      }
+      else if(hardware.is_button_longpress()){
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+      }
+
+      break;
+
+      //TODO: indicator functions needed
+    case 10: //blink bat and go to sleep
+      // state actions:       #####
+
+      // state flowControl    #####
+      loopCtrl = 0;
+      stateTransitionTime = HAL_GetTick();
+
+      break;
+    case 11:
+      // state actions:       #####
+
+      // state flowControl    #####
+
+      break;
+    case 12:
+      // state actions:       #####
+
+      // state flowControl    #####
+
+      break;
+
+    case 13: //check if port empty and turn on heater detection
+      // state actions:       #####
+
+      // state flowControl    #####
+      if(hardware.is_port_empty()){
+        hardware.set_htr_det(true);
+        loopCtrl = 5; // go to wait for heater connection
+        stateTransitionTime = HAL_GetTick();
+      }
+      else{ //something (charger, unknown) is connected, blink SOC and go back to sleep for safety!
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+      }
+      break;
+  }
+}
 /* USER CODE END 0 */
 
 /**

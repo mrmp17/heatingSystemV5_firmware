@@ -13,7 +13,7 @@
 #include "gpio.h"
 #include "rtc.h"
 
-#define HANDLER_PERIOD 20;
+#define HANDLER_PERIOD 20
 
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
@@ -29,6 +29,7 @@
 #define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
+#define PORT_EMTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
 
 //bat SOC definitions
 #define SOC_0to10 0
@@ -50,7 +51,7 @@
 
 //heating power defines
 #define HEAT_LOW 1500 //mW
-#define HEAT_MID 2000 //mW
+#define HEAT_MED 2000 //mW
 #define HEAT_HIGH 2600 //mW
 #define HEAT_MAX 3500 //mW use only to preheat. not possible at low battery voltages
 
@@ -58,6 +59,10 @@
 #define BUTTON_DBOUNCE_CYCLES 2
 #define BUTTON_SHORPTESS_CYCLES 5
 #define BUTTON_LONGPRESS_CYCLES 100
+
+#define WAIT_LONGPRESS (HANDLER_PERIOD*BUTTON_LONGPRESS_CYCLES)+50
+
+#define WAIT_HEATER_TIMEOUT 20000
 
 
 
@@ -82,10 +87,11 @@ public:
     void stop_ADC(); //stops ADC conversions
     uint8_t chrg_stat(); //gets charger status (see status defines)
     bool is_htr_connected(); //checks if heater cable is connected
-    void set_heating(uint16_t value); //enables heating/sets heating power.
+    void set_heating(uint16_t value); //enables heating/sets heating power. this is ABSOLUTE HEATING POWER - PWM DUTY
     bool is_charging(); //checks if battery is charging
     uint8_t get_SOC(); //returns estimated battery state. see SOC_xtoy defines
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
+    bool is_port_empty(); //returns true if nothing is connected to USB-C connector
     bool is_button_longpress(); //returns longpress flag and clears it
     bool is_button_shortpress(); //returns longpress flag and clears it
 

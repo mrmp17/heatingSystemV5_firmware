@@ -143,6 +143,13 @@ bool Hardware::is_sply_5V3A() {
   return (CC1 < V5V3A_LCC_MAX && (CC2 > V5V3A_HCC_MIN && CC2 < V5V3A_HCC_MAX)) || (CC2 < V5V3A_LCC_MAX && (CC1 > V5V3A_HCC_MIN && CC1 < V5V3A_HCC_MAX));
 }
 
+bool Hardware::is_port_empty() {
+  if(get_CC1_volt() < PORT_EMTY_CCMAX && get_CC2_volt() < PORT_EMTY_CCMAX){
+    return true;
+  }
+  else return false;
+}
+
 bool Hardware::is_charging() {
   return false;
   //todo: implement
@@ -280,7 +287,7 @@ void Hardware::sleep() {
   else{
     wakeup_src = WAKE_SOURCE_RTC;
   }
-  *btn_int_flag_pointer = false;
+  //*btn_int_flag_pointer = false; //do this before sleep, not after
   //set_charging(false);  //TODO: is this ok?
   button_handler(true); //call handler with reset param
 
@@ -491,5 +498,6 @@ bool Hardware::is_button_longpress() {
 uint8_t Hardware::wake_source() {
   return wakeup_src;
 }
+
 
 
