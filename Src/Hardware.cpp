@@ -144,10 +144,20 @@ bool Hardware::is_sply_5V3A() {
 }
 
 bool Hardware::is_port_empty() {
-  if(get_CC1_volt() < PORT_EMTY_CCMAX && get_CC2_volt() < PORT_EMTY_CCMAX){
-    return true;
+  if(is_htr_det_on()){
+    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() > PORT_EMPTY_CC1_MIN){
+      return true;
+    }
+    else return false;
   }
-  else return false;
+
+  else{
+    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() < PORT_EMPTY_CCMAX){
+      return true;
+    }
+    else return false;
+  }
+
 }
 
 bool Hardware::is_charging() {
@@ -159,6 +169,7 @@ uint8_t Hardware::get_SOC() {
   static uint8_t soc = SOC_40to70; //persistent SOC variable
   uint16_t voltage = get_vbat();
 
+  //debug_print("v: %d\n", voltage);
   if(voltage <= soc_thr[3]){
     soc = SOC_DEAD; //if battery falls below 2.8V, report battery dead
   }
@@ -255,6 +266,7 @@ void Hardware::soft_pwm_handler(bool reset) {
 }
 
 void Hardware::sleep() {
+  if(!ENABLE_SLEEP) return;
   //disable all power hungry peripherals and enter sleep
   //TODO: check if other stuff needs to be turned off
   //just in case, set heating to OFF and call handler to make sure heating gets disabled
@@ -262,7 +274,7 @@ void Hardware::sleep() {
   soft_pwm_handler(false);
 
   stop_ADC(); //stop ADC/DMA
-  set_vbat_sply(false); //disable vbat divider supply
+  //set_vbat_sply(false); //disable vbat divider supply
   set_charging(true); //enable charging to prevent CE pulldown drain
   //enable RTC timer
   uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
@@ -279,6 +291,7 @@ void Hardware::sleep() {
 
   config_clk_wake();
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+  HAL_ResumeTick();
   set_vbat_sply(true); //enable vbat divider supply
   start_ADC();
   if(*btn_int_flag_pointer){
@@ -287,9 +300,11 @@ void Hardware::sleep() {
   else{
     wakeup_src = WAKE_SOURCE_RTC;
   }
+  //HAL_Delay(10);
   //*btn_int_flag_pointer = false; //do this before sleep, not after
   //set_charging(false);  //TODO: is this ok?
   button_handler(true); //call handler with reset param
+  chrg_stat_handler(true);
 
 }
 
@@ -497,6 +512,16 @@ bool Hardware::is_button_longpress() {
 
 uint8_t Hardware::wake_source() {
   return wakeup_src;
+}
+
+void Hardware::trace(uint16_t state_num) {
+  if(STATE_TRACE){
+    debug_print("TRC: %d\n", state_num);
+  }
+}
+
+bool Hardware::is_htr_det_on() {
+  return htr_det_state;
 }
 
 

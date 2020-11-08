@@ -13,6 +13,9 @@
 #include "gpio.h"
 #include "rtc.h"
 
+#define STATE_TRACE true
+#define ENABLE_SLEEP true
+
 #define HANDLER_PERIOD 20
 
 #define ADC_MAX_VAL 4095
@@ -29,7 +32,8 @@
 #define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
-#define PORT_EMTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
+#define PORT_EMPTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
+#define PORT_EMPTY_CC1_MIN 2450 //
 
 //bat SOC definitions
 #define SOC_0to10 0
@@ -111,10 +115,12 @@ public:
     bool chrg_pgd(); //gets input power good status from charger (true if ~5V present on VBUS)
     bool is_pwr_mosfet_on(); //check if power mosfet is connecting battery voltage to VBUS
     void set_htr_det(bool state); //enable or disable heater detect pullup resistor (NOT USED)
+    bool is_htr_det_on();
     bool get_button_state();
     void set_default_input_cur(); //sets default VBUS input current limit ~1A
     void set_max_input_cur(); //sets maximum VBUS input current limit ~3A
     uint16_t rel_htr_pwr(uint16_t power_mw); //returns relative heater power in %, required to get requested power ouptut
+    void trace(uint16_t state_num);
 
     void config_clk_wake();
     void config_gpio_slp(); //not used currently
