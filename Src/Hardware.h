@@ -33,7 +33,7 @@
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define PORT_EMPTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
-#define PORT_EMPTY_CC1_MIN 2450 //
+#define PORT_EMPTY_CC2_MIN 2480 //min voltage for CC2 pin (that is in this case hard pulled up by another GPIO)
 
 //bat SOC definitions
 #define SOC_0to10 0
@@ -42,7 +42,7 @@
 #define SOC_70to100 3
 #define SOC_DEAD 4
 
-#define BAT_RINT 50 //internal resistance in miliohms
+#define BAT_RINT 100 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
 
 #define WAKE_SOURCE_BTN 0
 #define WAKE_SOURCE_RTC 1
@@ -98,6 +98,7 @@ public:
     bool is_port_empty(); //returns true if nothing is connected to USB-C connector
     bool is_button_longpress(); //returns longpress flag and clears it
     bool is_button_shortpress(); //returns longpress flag and clears it
+    void clear_button_flags();
 
     void sleep(); //prepare and enter sleep, configures after sleep
     uint8_t wake_source(); //returns wake-up source

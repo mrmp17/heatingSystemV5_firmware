@@ -145,7 +145,7 @@ bool Hardware::is_sply_5V3A() {
 
 bool Hardware::is_port_empty() {
   if(is_htr_det_on()){
-    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() > PORT_EMPTY_CC1_MIN){
+    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() > PORT_EMPTY_CC2_MIN){
       return true;
     }
     else return false;
@@ -450,6 +450,9 @@ void Hardware::button_handler(bool reset) {
     //TODO
     //if button is being held down before sleep, we don't want long press flag after longpress duration after sleep every time MCU wakes up
     loopCtrl = 0;
+    //reset flags if called with reset parameter
+    shortPressFlag = false;
+    longPressFlag = false;
   }
 
   switch(loopCtrl){
@@ -522,6 +525,12 @@ void Hardware::trace(uint16_t state_num) {
 
 bool Hardware::is_htr_det_on() {
   return htr_det_state;
+}
+
+void Hardware::clear_button_flags() {
+  //clear both flags
+  is_button_shortpress();
+  is_button_longpress();
 }
 
 

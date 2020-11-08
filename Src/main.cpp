@@ -72,7 +72,7 @@ Hardware hardware(&pcintFlag);
 
 void stateMachine(){
   static uint16_t loopCtrl = 0;
-  static uint16_t stateTransitionTime = 0;
+  static uint32_t stateTransitionTime = 0;
 
   switch(loopCtrl){
     case 0: //main inactive/sleep state
@@ -124,15 +124,18 @@ void stateMachine(){
       if(hardware.chrg_pgd()){
         loopCtrl = 11; //go charging
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(HAL_GetTick() - stateTransitionTime > WAIT_LONGPRESS){ //longpress should have happened by now, going back to sleep
         loopCtrl = 0;
+        hardware.debug_print("now %d, strs: %d\n", HAL_GetTick(), stateTransitionTime);
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
@@ -174,16 +177,18 @@ void stateMachine(){
       // state flowControl    #####
       loopCtrl = 13;
       stateTransitionTime = HAL_GetTick();
+      hardware.clear_button_flags();
       hardware.trace(loopCtrl);
 
       break;
-    case 5:
+    case 5: //wait for valid heater connection todo: alow few ms for voltage settling when connecting
       // state actions:       #####
 
       // state flowControl    #####
       if(hardware.is_htr_connected()){
         loopCtrl = 8; //go to medium heating
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_port_empty()){
@@ -191,16 +196,18 @@ void stateMachine(){
           loopCtrl = 10;
           hardware.set_htr_det(false);
           stateTransitionTime = HAL_GetTick();
+          hardware.clear_button_flags();
           hardware.trace(loopCtrl);
         }
         //else nothing to do, just wait
       }
       else{
         //something that is not heater is connected, ABORT
-        hardware.debug_print("abort\n");
+        //hardware.debug_print("abort\n");
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       break;
@@ -212,6 +219,7 @@ void stateMachine(){
       // state flowControl    #####
       loopCtrl = 3;
       stateTransitionTime = HAL_GetTick();
+      hardware.clear_button_flags();
       hardware.trace(loopCtrl);
 
       break;
@@ -226,11 +234,13 @@ void stateMachine(){
       if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
@@ -256,11 +266,13 @@ void stateMachine(){
       if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
@@ -287,11 +299,13 @@ void stateMachine(){
       if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
@@ -315,6 +329,7 @@ void stateMachine(){
       // state flowControl    #####
       loopCtrl = 0;
       stateTransitionTime = HAL_GetTick();
+      hardware.clear_button_flags();
       hardware.trace(loopCtrl);
 
       break;
@@ -327,11 +342,13 @@ void stateMachine(){
       if(!hardware.chrg_pgd()){ //charger disconnected
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.chrg_stat() == CHRG_STAT_IDLE){ //charging finished
         loopCtrl = 12;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
 
@@ -345,11 +362,13 @@ void stateMachine(){
       if(!hardware.chrg_pgd()){ //charger disconnected
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.chrg_stat() == CHRG_STAT_CHARGING){ //charging again
         loopCtrl = 11;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
 
@@ -363,11 +382,13 @@ void stateMachine(){
         hardware.set_htr_det(true);
         loopCtrl = 5; // go to wait for heater connection
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else{ //something (charger, unknown) is connected, blink SOC and go back to sleep for safety!
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       break;
@@ -409,7 +430,7 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_Delay(3000);
+  HAL_Delay(5000);
 
   hardware.init();
 
