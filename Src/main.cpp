@@ -135,7 +135,7 @@ void stateMachine(){
       }
       else if(HAL_GetTick() - stateTransitionTime > WAIT_LONGPRESS){ //longpress should have happened by now, going back to sleep
         loopCtrl = 0;
-        hardware.debug_print("now %d, strs: %d\n", HAL_GetTick(), stateTransitionTime);
+        //hardware.debug_print("now %d, strs: %d\n", HAL_GetTick(), stateTransitionTime);
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
@@ -182,16 +182,26 @@ void stateMachine(){
 
       break;
     case 5: //wait for valid heater connection todo: alow few ms for voltage settling when connecting
+      static uint32_t portNotEmptyTime = 0; //warning, this is accessible in all switch cases!
       // state actions:       #####
 
       // state flowControl    #####
-      if(hardware.is_htr_connected()){
+      if(hardware.chrg_pgd()){ //power supply connected
+        portNotEmptyTime = 0;
+        loopCtrl = 10;
+        stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
+        hardware.trace(loopCtrl);
+      }
+      else if(hardware.is_htr_connected()){
+        portNotEmptyTime = 0;
         loopCtrl = 8; //go to medium heating
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_port_empty()){
+        portNotEmptyTime = 0;
         if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
           loopCtrl = 10;
           hardware.set_htr_det(false);
@@ -201,9 +211,13 @@ void stateMachine(){
         }
         //else nothing to do, just wait
       }
-      else{
-        //something that is not heater is connected, ABORT
+      else if(portNotEmptyTime == 0){
+        portNotEmptyTime = HAL_GetTick();
+      }
+      else if(HAL_GetTick() - portNotEmptyTime > PORT_NOT_EMPTY_WAIT){
+        //something that is not heater is connected even after waiting for PORT_NOT_EMPTY_WAIT time, ABORT
         //hardware.debug_print("abort\n");
+        portNotEmptyTime = 0;
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -232,12 +246,14 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
+        hardware.set_heating(0);
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
+        hardware.set_heating(0);
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -249,6 +265,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
+        hardware.set_heating(0);
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -264,12 +281,14 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
+        hardware.set_heating(0);
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
+        hardware.set_heating(0);
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -281,6 +300,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
+        hardware.set_heating(0);
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -297,12 +317,14 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
+        hardware.set_heating(0);
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(!hardware.is_htr_connected()){
+        hardware.set_heating(0);
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -314,6 +336,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
+        hardware.set_heating(0);
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
