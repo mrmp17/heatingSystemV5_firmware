@@ -7,21 +7,51 @@
 
 
 #include <stdint.h>
+#include "stm32l0xx_hal.h"
+#include "Hardware.h"
+#define NUM_LEDS 3
+
+#define SLOW_ON 500
+#define SLOW_OFF 1000
+#define FAST_ON 100
+#define FAST_OFF 300
+
+#define MODE_OFF 0
+#define MODE_SLOW 1
+#define MODE_FAST 2
+#define MODE_SOLID 3
+
+#define MAX_HANDLER_dT (FAST_ON + FAST_OFF) / 2
 
 class Indicator {
 
 public:
 
+    Indicator(Hardware *obj);
+
+    void led_handler(bool reset); //call this at least once every 10ms
+
+    void slow_blink(uint8_t led);
+    void fast_blink(uint8_t led);
+    void solid_on(uint8_t led);
+    void solid_off(uint8_t led);
+    void stop_blink(); //calls solid_off for all leds
+
+
+
 private:
 
-    uint8_t seq1_L[2] = {0,1};
-    uint32_t seq1_T[2] = {1000, 1000};
+    void set_led(uint8_t led, bool state);
 
-    uint8_t seq2_L[4] = {0,1,0,1};
-    uint32_t seq2_T[4] = {1000, 1000, 500, 500};
+    uint8_t ledModes[NUM_LEDS] = {0};
 
-    uint8_t *seq_L_list[2] = {seq1_L, seq2_L};
-    uint32_t *seq_T_list[2] = {seq1_T, seq2_T};
+    uint32_t slowRamp = 0;
+    uint32_t fastRamp = 0;
+
+    Hardware *hw_driver;
+
+
+
 
 };
 

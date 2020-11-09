@@ -78,13 +78,13 @@ void Hardware::set_vbat_sply(bool state) {
 
 
 void Hardware::led_ctrl(uint8_t led, bool state) {
-  if(led == 1){
+  if(led == 0){
     HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
   }
-  else if(led == 2){
+  else if(led == 1){
     HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
   }
-  else if(led == 3){
+  else if(led == 2){
     HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
   }
 }
