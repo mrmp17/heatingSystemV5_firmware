@@ -193,12 +193,11 @@ void stateMachine(){
     case 5: //wait for valid heater connection
       static uint32_t portNotEmptyTime = 0; //warning, this is accessible in all switch cases!
       // state actions:       #####
-      leds.fast_blink(1);
+      leds.stop_blink();
 
       // state flowControl    #####
       if(hardware.chrg_pgd()){ //power supply connected
         portNotEmptyTime = 0;
-        leds.stop_blink();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -206,7 +205,6 @@ void stateMachine(){
       }
       else if(hardware.is_htr_connected()){
         portNotEmptyTime = 0;
-        leds.stop_blink();
         loopCtrl = 8; //go to medium heating
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -215,7 +213,6 @@ void stateMachine(){
       else if(hardware.is_port_empty()){
         portNotEmptyTime = 0;
         if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
-          leds.stop_blink();
           loopCtrl = 10;
           hardware.set_htr_det(false);
           stateTransitionTime = HAL_GetTick();
@@ -232,7 +229,6 @@ void stateMachine(){
         //hardware.debug_print("abort\n");
         portNotEmptyTime = 0;
         hardware.set_htr_det(false);
-        leds.stop_blink();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -243,7 +239,7 @@ void stateMachine(){
       //TODO: indicator functions needed
     case 6:
       // state actions:       #####
-
+      leds.stop_blink();
       // state flowControl    #####
       loopCtrl = 3;
       stateTransitionTime = HAL_GetTick();
@@ -257,20 +253,19 @@ void stateMachine(){
       // state actions:       #####
       hardware.set_heating(hardware.rel_htr_pwr(HEAT_LOW));
       if(hardware.get_SOC() == SOC_0to10){
-        leds.slow_blink(0);
+        leds.solid_off(0);
         leds.solid_off(1);
-        leds.solid_off(2);
+        leds.slow_blink(2);
       }
       else{
-        leds.solid_on(0);
+        leds.solid_on(2);
+        leds.solid_off(0);
         leds.solid_off(1);
-        leds.solid_off(2);
       }
 
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -278,21 +273,18 @@ void stateMachine(){
       }
       else if(!hardware.is_htr_connected()){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
-        leds.stop_blink();
         loopCtrl = 8;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
-        leds.stop_blink();
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -305,20 +297,19 @@ void stateMachine(){
       // state actions:       #####
       hardware.set_heating(hardware.rel_htr_pwr(HEAT_MED));
       if(hardware.get_SOC() == SOC_0to10){
-        leds.slow_blink(0);
+        leds.slow_blink(2);
         leds.slow_blink(1);
-        leds.solid_off(2);
+        leds.solid_off(0);
       }
       else{
-        leds.solid_on(0);
         leds.solid_on(1);
-        leds.solid_off(2);
+        leds.solid_on(2);
+        leds.solid_off(0);
       }
 
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -326,21 +317,18 @@ void stateMachine(){
       }
       else if(!hardware.is_htr_connected()){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
-        leds.stop_blink();
         loopCtrl = 9;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
-        leds.stop_blink();
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -367,7 +355,6 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -375,21 +362,18 @@ void stateMachine(){
       }
       else if(!hardware.is_htr_connected()){
         hardware.set_heating(0);
-        leds.stop_blink();
         loopCtrl = 5;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
-        leds.stop_blink();
         loopCtrl = 7;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
-        leds.stop_blink();
         hardware.set_htr_det(false);
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -401,7 +385,7 @@ void stateMachine(){
       //TODO: indicator functions needed
     case 10: //blink bat and go to sleep
       // state actions:       #####
-
+      leds.stop_blink();
       // state flowControl    #####
       loopCtrl = 0;
       stateTransitionTime = HAL_GetTick();
@@ -412,18 +396,23 @@ void stateMachine(){
     case 11:
       // state actions:       #####
       leds.slow_blink(1);
-      //todo: optimize charging current
+      if(hardware.is_sply_5V3A()){
+        hardware.set_max_input_cur();
+      }
+      else{
+        hardware.set_default_input_cur();
+      }
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
-        leds.stop_blink();
+        hardware.set_default_input_cur();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.chrg_stat() == CHRG_STAT_IDLE){ //charging finished
-        leds.stop_blink();
+        hardware.set_default_input_cur();
         loopCtrl = 12;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -438,14 +427,12 @@ void stateMachine(){
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
-        leds.stop_blink();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.chrg_stat() == CHRG_STAT_CHARGING){ //charging again
-        leds.stop_blink();
         loopCtrl = 11;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -550,6 +537,10 @@ int main(void)
       hardware.button_handler(false);
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
+    }
+    if(cnt%100 == 0){
+      hardware.debug_print("B: %d mV\n", hardware.get_vbat());
+      cnt++;
     }
 
     stateMachine();

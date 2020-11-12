@@ -66,7 +66,7 @@
 
 #define WAIT_LONGPRESS (HANDLER_PERIOD*BUTTON_LONGPRESS_CYCLES)+50
 
-#define WAIT_HEATER_TIMEOUT 20000
+#define WAIT_HEATER_TIMEOUT 200
 #define PORT_NOT_EMPTY_WAIT 100 //wait to allow connected heater CC resistor divider settle down before recognising it as non-heater device
 
 
