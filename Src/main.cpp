@@ -71,11 +71,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 Hardware hardware(&pcintFlag);
 Indicator leds(&hardware);
 
-bool SOC_to_led(uint8_t ledNum){
-  //this turns correct leds on depending on battery state
-  //use for
-
-}
 
 
 void stateMachine(){
@@ -530,6 +525,16 @@ int main(void)
     static uint32_t timing = 0;
     static uint32_t cnt = 0;
 
+    //start testing
+//    while (1){
+//      leds.led_handler(false);
+//      leds.slow_blink(2);
+//      leds.slow_blink(1);
+//      leds.solid_off(0);
+//      //HAL_Delay(20);
+//    }
+    //end testing
+
     if(HAL_GetTick() - timing >= HANDLER_PERIOD && true){ //20ms event
       timing = HAL_GetTick();
       cnt++;
@@ -537,9 +542,11 @@ int main(void)
       hardware.button_handler(false);
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
+      hardware.debug_print("%d\n", hardware.get_vbat());
     }
     if(cnt%100 == 0){
-      hardware.debug_print("B: %d mV\n", hardware.get_vbat());
+      //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
+      //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
       cnt++;
     }
 

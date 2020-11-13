@@ -77,6 +77,13 @@ void MX_ADC_Init(void)
   {
     Error_Handler();
   }
+  /** Configure for the selected ADC regular channel to be converted. 
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
@@ -96,9 +103,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     /**ADC GPIO Configuration    
     PA3     ------> ADC_IN3
     PA4     ------> ADC_IN4
-    PA5     ------> ADC_IN5 
+    PA5     ------> ADC_IN5
+    PA7     ------> ADC_IN7 
     */
-    GPIO_InitStruct.Pin = USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin;
+    GPIO_InitStruct.Pin = USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin|HTR_DET_ADC_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -144,9 +152,10 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     /**ADC GPIO Configuration    
     PA3     ------> ADC_IN3
     PA4     ------> ADC_IN4
-    PA5     ------> ADC_IN5 
+    PA5     ------> ADC_IN5
+    PA7     ------> ADC_IN7 
     */
-    HAL_GPIO_DeInit(GPIOA, USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin);
+    HAL_GPIO_DeInit(GPIOA, USB_CC1_ANALOG_Pin|USB_CC2_ANALOG_Pin|VBAT_SNS_Pin|HTR_DET_ADC_Pin);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(adcHandle->DMA_Handle);

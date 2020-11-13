@@ -46,7 +46,7 @@ bool Hardware::is_pwr_mosfet_on() {
 
 void Hardware::start_ADC() {
   HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED); //calibrate ADC //todo: how long does this take?
-  HAL_ADC_Start_DMA(&hadc, ADC_buffer, 3);
+  HAL_ADC_Start_DMA(&hadc, ADC_buffer, 4);
 }
 
 void Hardware::stop_ADC() {
@@ -57,6 +57,10 @@ void Hardware::stop_ADC() {
 
 uint16_t Hardware::get_vbat() {
   return ((ADC_buffer[ADC_VBAT]*ADC_REF)/ADC_MAX_VAL)* ADC_VBAT_KOEF; //return battery voltage in millivolts
+}
+
+uint16_t Hardware::get_UDP_volt() {
+  return ((ADC_buffer[ADC_UDP]*ADC_REF)/ADC_MAX_VAL); //return usb D+ voltage in millivolts
 }
 
 uint16_t Hardware::get_CC1_volt() {
@@ -145,7 +149,7 @@ bool Hardware::is_sply_5V3A() {
 
 bool Hardware::is_port_empty() {
   if(is_htr_det_on()){
-    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() > PORT_EMPTY_CC2_MIN){
+    if(get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() < PORT_EMPTY_CCMAX && !is_htr_connected()){
       return true;
     }
     else return false;
@@ -166,41 +170,62 @@ bool Hardware::is_charging() {
 }
 
 uint8_t Hardware::get_SOC() {
-  static uint8_t soc = SOC_40to70; //persistent SOC variable
+  static uint8_t loopCtrl = 1;
+  static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
 
-  //debug_print("v: %d\n", voltage);
-  if(voltage <= soc_thr[3]){
-    soc = SOC_DEAD; //if battery falls below 2.8V, report battery dead
-  }
+  switch (loopCtrl){
 
-  else{
-    if(soc == SOC_DEAD && voltage < soc_thr[4]) soc = SOC_DEAD; //return SOC_DEAD until battery reaches SOC_DEAD release voltage
-
-    else if(is_charging()){ //battery is charging
-      //shit. current (internal resistance voltage drop) not known :( don't report state while charging, this is very imprecise
-      if(voltage <  soc_thr[0]) soc = SOC_0to10;
-      else if(voltage <  soc_thr[1]) soc = SOC_10to40;
-      else if(voltage <  soc_thr[2]) soc = SOC_40to70;
-      else soc = SOC_70to100;
-    }
-    else{ //battery is not charging
-      if(is_pwr_mosfet_on()){ //battery is loaded by the heater, compensate for internal resistance drop
-        uint16_t irdrop = (((float)voltage / HTR_RESISTANCE)*BAT_RINT); //drop on battery internal resistance in mV
-        voltage = voltage + irdrop; // compensate for internal resistance drop
-        if(voltage <  soc_thr[0]) soc = SOC_0to10;
-        else if(voltage <  soc_thr[1]) soc = SOC_10to40;
-        else if(voltage <  soc_thr[2]) soc = SOC_40to70;
-        else soc = SOC_70to100;
-
+    case 0: //SOC_DEAD
+      soc = SOC_DEAD;
+      if(voltage > soc_thr[4]){
+        loopCtrl = 1;
+        soc = SOC_0to10;
       }
-      else{ //battery is unloaded
-        if(voltage <  soc_thr[0]) soc = SOC_0to10;
-        else if(voltage <  soc_thr[1]) soc = SOC_10to40;
-        else if(voltage <  soc_thr[2]) soc = SOC_40to70;
-        else soc = SOC_70to100;
-      }
+      break;
+
+    case 1: //SOC_10to40
+    soc = SOC_0to10;
+    if(voltage < soc_thr[3]){
+      loopCtrl = 0;
+      soc = SOC_DEAD;
     }
+    else if(voltage > soc_thr[0]+SOC_HYST){
+      loopCtrl = 2;
+      soc = SOC_10to40;
+    }
+      break;
+
+    case 2: //SOC_40to70
+      soc = SOC_10to40;
+      if(voltage < soc_thr[0]){
+        loopCtrl = 1;
+        soc = SOC_0to10;
+      }
+      else if(voltage > soc_thr[1]+SOC_HYST){
+        loopCtrl = 3;
+        soc = SOC_40to70;
+      }
+      break;
+
+    case 3: //SOC_70to100
+      soc = SOC_40to70;
+      if(voltage < soc_thr[1]){
+        loopCtrl = 2;
+        soc = SOC_10to40;
+      }
+      else if(voltage > soc_thr[2]+SOC_HYST){
+        loopCtrl = 4;
+        soc = SOC_70to100;
+      }
+      break;
+    case 4: //SOC_70to100
+      soc = SOC_70to100;
+      if(voltage < soc_thr[2]){
+        loopCtrl = 3;
+        soc = SOC_40to70;
+      }
+      break;
   }
 
   return soc;
@@ -209,14 +234,14 @@ uint8_t Hardware::get_SOC() {
 bool Hardware::is_htr_connected() {
   if(!htr_det_state){
     return false; //return false if detection circuit is not ON
-    //can not detect heater without tetection circuit
+    //can not detect heater without detection circuit
   }
-  //CC2 pin is hard pulled up. should be around 2500mV
-  //CC1 is mid of divider |2V5 -- 10K -- CC1 -- 5K1 -- GND| if heater is connected
-  //voltage should be around 844mV if connected, around 0 if not. (added +-8% tolerance)
-  uint16_t cc1 = get_CC1_volt();
-  uint16_t cc2 = get_CC2_volt();
-  return (cc2 > 2400 && (cc1 > 780 && cc1 < 910)); //todo: test if range is to small
+  //USB data+ is pulled down with 10k in heater connector
+  //when HTR_DET is high it pulls D+ high 10k
+  //D+ voltage sould be VCC/2 = 1250mV +-8%: 1188mV to 1313mV
+  //both cc pins should be floaty
+  uint16_t dpVolt = get_UDP_volt();
+  return (get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() < PORT_EMPTY_CCMAX && (dpVolt > UDP_HTR_MIN && dpVolt < UDP_HTR_MAX));
 }
 
 uint16_t Hardware::rel_htr_pwr(uint16_t power_mw) {

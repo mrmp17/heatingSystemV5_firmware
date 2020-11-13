@@ -13,7 +13,7 @@
 #include "gpio.h"
 #include "rtc.h"
 
-#define STATE_TRACE true
+#define STATE_TRACE falsea
 #define ENABLE_SLEEP true
 
 #define HANDLER_PERIOD 20
@@ -28,12 +28,14 @@
 #define ADC_CC1 0
 #define ADC_CC2 1
 #define ADC_VBAT 2
+#define ADC_UDP 3
 
 #define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define PORT_EMPTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
-#define PORT_EMPTY_CC2_MIN 2480 //min voltage for CC2 pin (that is in this case hard pulled up by another GPIO)
+#define UDP_HTR_MIN 1188
+#define UDP_HTR_MAX 1313
 
 //bat SOC definitions
 #define SOC_0to10 0
@@ -41,6 +43,8 @@
 #define SOC_40to70 2
 #define SOC_70to100 3
 #define SOC_DEAD 4
+#define SOC_HYST 100 //mV
+
 
 #define BAT_RINT 100 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
 
@@ -112,6 +116,7 @@ public:
     uint16_t get_CC1_volt(); //gets CC1 pin voltage
     uint16_t get_CC2_volt(); //gets CC2 pin voltage
     uint16_t get_vbat(); //gets battery voltage
+    uint16_t get_UDP_volt(); //gets USB data positive voltage
     void set_vbat_sply(bool state); //turns on/off vbat resistor divider supply (GND)
     void led_ctrl(uint8_t led, bool state); //turns specified led ON or OFF
     bool chrg_pgd(); //gets input power good status from charger (true if ~5V present on VBUS)
@@ -125,13 +130,13 @@ public:
     void trace(uint16_t state_num);
 
     void config_clk_wake();
-    void config_gpio_slp(); //not used currently
-    void config_gpio_wake(); //not used currently
+    void config_gpio_slp(); //not used currently //todo: not updated
+    void config_gpio_wake(); //not used currently //todo: not updated
 
     uint32_t handler_counter = 0; //increments every time handler executes
 
 
-    uint32_t ADC_buffer[3] = {0}; //ADC buffer (filled by DMA)
+    uint32_t ADC_buffer[4] = {0}; //ADC buffer (filled by DMA)
 
 
 

@@ -77,7 +77,7 @@ void Indicator::led_handler(bool reset) {
         }
         else if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
           set_led(n, false);
-          loopCtrl[n] = 1;
+          loopCtrl[n] = 2;
         }
         break;
 
