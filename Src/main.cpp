@@ -71,7 +71,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 Hardware hardware(&pcintFlag);
 Indicator leds(&hardware);
 
-
+void blinkBattery(){
+  switch(hardware.get_SOC()){
+    case SOC_DEAD:
+      leds.single(2, true); //todo: this should be single FAST blinking
+      break;
+    case SOC_0to10:
+      leds.single(2, true); //todo: this should be single blinking
+      break;
+    case SOC_10to40:
+      leds.single(2, false);
+      break;
+    case SOC_40to70:
+      leds.single(2, false);
+      leds.single(1, false);
+      break;
+    case SOC_70to100:
+      leds.single(2, false);
+      leds.single(1, false);
+      leds.single(0, false);
+      break;
+  }
+}
 
 void stateMachine(){
   static uint16_t loopCtrl = 0;
@@ -132,6 +153,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(hardware.get_SOC() == SOC_DEAD){
+        blinkBattery();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -144,11 +166,13 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_shortpress()){
+        blinkBattery();
         loopCtrl = 10; //display battery SOC and go to sleep if short press
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_button_longpress()){
+        //blinkBattery(); //not needed
         loopCtrl = 4; //blink SOC and go to heating
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -179,10 +203,13 @@ void stateMachine(){
       // state actions:       #####
 
       // state flowControl    #####
-      loopCtrl = 13;
-      stateTransitionTime = HAL_GetTick();
-      hardware.clear_button_flags();
-      hardware.trace(loopCtrl);
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2)){
+        loopCtrl = 13;
+        stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
+        hardware.trace(loopCtrl);
+      }
+
 
       break;
     case 5: //wait for valid heater connection
@@ -193,6 +220,7 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.chrg_pgd()){ //power supply connected
         portNotEmptyTime = 0;
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -208,6 +236,7 @@ void stateMachine(){
       else if(hardware.is_port_empty()){
         portNotEmptyTime = 0;
         if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
+          blinkBattery();
           loopCtrl = 10;
           hardware.set_htr_det(false);
           stateTransitionTime = HAL_GetTick();
@@ -224,6 +253,7 @@ void stateMachine(){
         //hardware.debug_print("abort\n");
         portNotEmptyTime = 0;
         hardware.set_htr_det(false);
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -231,15 +261,17 @@ void stateMachine(){
       }
       break;
 
-      //TODO: indicator functions needed
     case 6:
       // state actions:       #####
       leds.stop_blink();
       // state flowControl    #####
-      loopCtrl = 3;
-      stateTransitionTime = HAL_GetTick();
-      hardware.clear_button_flags();
-      hardware.trace(loopCtrl);
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2)){
+        loopCtrl = 3;
+        stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
+        hardware.trace(loopCtrl);
+      }
+
 
       break;
 
@@ -261,6 +293,7 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
+        blinkBattery();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -281,6 +314,8 @@ void stateMachine(){
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
         hardware.set_htr_det(false);
+        leds.stop_blink();
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -305,6 +340,7 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
+        blinkBattery();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -325,6 +361,8 @@ void stateMachine(){
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
         hardware.set_htr_det(false);
+        leds.stop_blink();
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -350,6 +388,7 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
+        blinkBattery();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -370,6 +409,8 @@ void stateMachine(){
       else if(hardware.is_button_longpress()){
         hardware.set_heating(0);
         hardware.set_htr_det(false);
+        leds.stop_blink();
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -380,13 +421,14 @@ void stateMachine(){
       //TODO: indicator functions needed
     case 10: //blink bat and go to sleep
       // state actions:       #####
-      leds.stop_blink();
-      // state flowControl    #####
-      loopCtrl = 0;
-      stateTransitionTime = HAL_GetTick();
-      hardware.clear_button_flags();
-      hardware.trace(loopCtrl);
 
+      // state flowControl    #####
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2)){
+        loopCtrl = 0;
+        stateTransitionTime = HAL_GetTick();
+        hardware.clear_button_flags();
+        hardware.trace(loopCtrl);
+      }
       break;
     case 11:
       // state actions:       #####
@@ -401,6 +443,7 @@ void stateMachine(){
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
         hardware.set_default_input_cur();
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -422,6 +465,7 @@ void stateMachine(){
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -448,6 +492,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else{ //something (charger, unknown) is connected, blink SOC and go back to sleep for safety!
+        blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -514,6 +559,8 @@ int main(void)
 
   //hardware.debug_print("wakeup :(\n");
 
+  //leds.solid_on(0);
+
 
   /* USER CODE END 2 */
 
@@ -542,9 +589,9 @@ int main(void)
       hardware.button_handler(false);
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
-      hardware.debug_print("%d\n", hardware.get_vbat());
+
     }
-    if(cnt%100 == 0){
+    if(cnt%200 == 0){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
       cnt++;

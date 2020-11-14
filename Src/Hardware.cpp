@@ -165,14 +165,22 @@ bool Hardware::is_port_empty() {
 }
 
 bool Hardware::is_charging() {
-  return false;
-  //todo: implement
+  return chrg_stat_ == 1;
 }
 
 uint8_t Hardware::get_SOC() {
   static uint8_t loopCtrl = 1;
   static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
+
+  //return SOC_0to10;
+
+  //check if voltage compensation for internal resistance is needed
+  if(is_pwr_mosfet_on()){ //correct for internal resistance
+    voltage = voltage + (uint16_t)(((float)voltage/HTR_RESISTANCE)*BAT_RINT);
+  }
+
+
 
   switch (loopCtrl){
 
@@ -291,7 +299,10 @@ void Hardware::soft_pwm_handler(bool reset) {
 }
 
 void Hardware::sleep() {
-  if(!ENABLE_SLEEP) return;
+  if(!ENABLE_SLEEP){
+    HAL_Delay(RTC_WAKE_TIME);
+    return;
+  }
   //disable all power hungry peripherals and enter sleep
   //TODO: check if other stuff needs to be turned off
   //just in case, set heating to OFF and call handler to make sure heating gets disabled

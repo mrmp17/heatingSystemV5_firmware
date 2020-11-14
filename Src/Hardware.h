@@ -13,7 +13,7 @@
 #include "gpio.h"
 #include "rtc.h"
 
-#define STATE_TRACE falsea
+#define STATE_TRACE true
 #define ENABLE_SLEEP true
 
 #define HANDLER_PERIOD 20
@@ -23,7 +23,7 @@
 #define MCU_SPLY 2500
 #define ADC_VBAT_KOEF 2
 
-#define HTR_RESISTANCE 2800 //mOhm
+#define HTR_RESISTANCE 2900 //mOhm
 //ADC_buffer array indexes
 #define ADC_CC1 0
 #define ADC_CC2 1
@@ -43,10 +43,10 @@
 #define SOC_40to70 2
 #define SOC_70to100 3
 #define SOC_DEAD 4
-#define SOC_HYST 100 //mV
+#define SOC_HYST 150 //mV
 
 
-#define BAT_RINT 100 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
+#define BAT_RINT 90 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
 
 #define WAKE_SOURCE_BTN 0
 #define WAKE_SOURCE_RTC 1
@@ -66,7 +66,7 @@
 //cycles correspond to time between handler calls
 #define BUTTON_DBOUNCE_CYCLES 2
 #define BUTTON_SHORPTESS_CYCLES 5
-#define BUTTON_LONGPRESS_CYCLES 100
+#define BUTTON_LONGPRESS_CYCLES 80
 
 #define WAIT_LONGPRESS (HANDLER_PERIOD*BUTTON_LONGPRESS_CYCLES)+50
 

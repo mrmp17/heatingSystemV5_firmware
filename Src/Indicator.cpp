@@ -10,6 +10,7 @@ Indicator::Indicator(Hardware *obj) {
 
 void Indicator::led_handler(bool reset) {
   static uint8_t loopCtrl[NUM_LEDS] = {0};
+  static uint32_t ledTiming[NUM_LEDS] = {0};
   static uint32_t lastHandlerTime = 0;
 
   uint32_t timeNow = HAL_GetTick();
@@ -67,6 +68,12 @@ void Indicator::led_handler(bool reset) {
           set_led(n, true);
           loopCtrl[n] = 1;
         }
+        else if(ledModes[n] == MODE_SINGLE){
+          ledTiming[n] = timeNow;
+          singleDone[n] = false;
+          set_led(n, false);
+          loopCtrl[n] = 3;
+        }
         break;
 
       case 1: //ful on
@@ -78,6 +85,12 @@ void Indicator::led_handler(bool reset) {
         else if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
           set_led(n, false);
           loopCtrl[n] = 2;
+        }
+        else if(ledModes[n] == MODE_SINGLE){
+          ledTiming[n] = timeNow;
+          singleDone[n] = false;
+          set_led(n, false);
+          loopCtrl[n] = 3;
         }
         break;
 
@@ -99,7 +112,101 @@ void Indicator::led_handler(bool reset) {
           set_led(n, true);
           loopCtrl[n] = 1;
         }
+        else if(ledModes[n] == MODE_SINGLE){
+          ledTiming[n] = timeNow;
+          singleDone[n] = false;
+          set_led(n, false);
+          loopCtrl[n] = 3;
+        }
         break;
+
+      case 3: //single pre off
+        if(timeNow - ledTiming[n] > SINGLE_PRE){
+          ledTiming[n] = timeNow;
+          if(!singleBlinking[n]){
+            set_led(n, true);
+          }
+          loopCtrl[n] = 4;
+        }
+        else if(ledModes[n] == MODE_OFF){
+          loopCtrl[n] = 0;
+          ledTiming[n] = 0;
+          set_led(n, false);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SOLID){
+          loopCtrl[n] = 1;
+          ledTiming[n] = 0;
+          set_led(n, true);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
+          loopCtrl[n] = 2;
+          ledTiming[n] = 0;
+          set_led(n, false);
+          singleDone[n] = true;
+        }
+        break;
+
+      case 4: //single on
+
+        if(singleBlinking[n]){
+          set_led(n, fastRamp<=FAST_ON);
+        }
+
+
+        if(timeNow - ledTiming[n] > SINGLE_ON){
+          ledTiming[n] = timeNow;
+          loopCtrl[n] = 5;
+          set_led(n, false);
+        }
+        else if(ledModes[n] == MODE_OFF){
+          loopCtrl[n] = 0;
+          ledTiming[n] = 0;
+          set_led(n, false);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SOLID){
+          loopCtrl[n] = 1;
+          ledTiming[n] = 0;
+          set_led(n, true);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
+          loopCtrl[n] = 2;
+          ledTiming[n] = 0;
+          singleDone[n] = true;
+        }
+        break;
+
+      case 5: //single post off
+        if(timeNow - ledTiming[n] > SINGLE_POST){ //single is done, reset mode to off
+          ledTiming[n] = 0;
+          singleDone[n] = true;
+          ledModes[n] = MODE_OFF;
+          loopCtrl[n] = 0;
+          set_led(n, false);
+        }
+        else if(ledModes[n] == MODE_OFF){
+          loopCtrl[n] = 0;
+          ledTiming[n] = 0;
+          set_led(n, false);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SOLID){
+          loopCtrl[n] = 1;
+          ledTiming[n] = 0;
+          set_led(n, true);
+          singleDone[n] = true;
+        }
+        else if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
+          loopCtrl[n] = 2;
+          ledTiming[n] = 0;
+          set_led(n, false);
+          singleDone[n] = true;
+        }
+        break;
+
 
 
     }
@@ -134,6 +241,16 @@ void Indicator::stop_blink() {
     ledModes[n] = MODE_OFF;
   }
   led_handler(false);
+}
+
+void Indicator::single(uint8_t led, bool blink) {
+  singleDone[led] = false;
+  singleBlinking[led] = blink;
+  ledModes[led] = MODE_SINGLE;
+}
+
+bool Indicator::is_single_done(uint8_t led) {
+  return singleDone[led];
 }
 
 void Indicator::set_led(uint8_t led, bool state) {
