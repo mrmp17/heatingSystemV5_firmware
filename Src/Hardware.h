@@ -43,7 +43,9 @@
 #define SOC_40to70 2
 #define SOC_70to100 3
 #define SOC_DEAD 4
-#define SOC_HYST 150 //mV
+#define SOC_HYST 20 //mV
+#define BAT_DIV_TCONST 60 //RC filter on battery divider takes 60ms to settle
+#define SOC_MAX_INTERVAL 5000 //SOC handler requests SOC measurement conditions after this many ms
 
 
 #define BAT_RINT 90 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
@@ -91,6 +93,7 @@ public:
     void soft_pwm_handler(bool reset); //call this in handler
     void chrg_stat_handler(bool reset);
     void button_handler(bool reset);
+    void SOC_handler(bool reset);
 
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
@@ -98,7 +101,9 @@ public:
     bool is_htr_connected(); //checks if heater cable is connected
     void set_heating(uint16_t value); //enables heating/sets heating power. this is ABSOLUTE HEATING POWER - PWM DUTY
     bool is_charging(); //checks if battery is charging
-    uint8_t get_SOC(); //returns estimated battery state. see SOC_xtoy defines
+    uint8_t calculate_SOC(); //returns estimated battery state. see SOC_xtoy defines
+    bool is_SOC_request_meas();
+    uint8_t get_SOC();
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
     bool is_port_empty(); //returns true if nothing is connected to USB-C connector
     bool is_button_longpress(); //returns longpress flag and clears it
@@ -118,6 +123,7 @@ public:
     uint16_t get_vbat(); //gets battery voltage
     uint16_t get_UDP_volt(); //gets USB data positive voltage
     void set_vbat_sply(bool state); //turns on/off vbat resistor divider supply (GND)
+    bool is_vbat_sply_on();
     void led_ctrl(uint8_t led, bool state); //turns specified led ON or OFF
     bool chrg_pgd(); //gets input power good status from charger (true if ~5V present on VBUS)
     bool is_pwr_mosfet_on(); //check if power mosfet is connecting battery voltage to VBUS
@@ -150,6 +156,10 @@ private:
 
     const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
     bool htr_det_state = false; //keeps state of heater detect functionality
+    uint32_t last_pwrmos_flip = 0; //keeps the time of last power mosfet switch (used for battery voltage measurements)
+    uint32_t last_divider_enable = 0; //keeps the time of last batter voltage divider turn-on event
+    uint8_t SOC_val = SOC_10to40; //keeps battery SOC state
+    bool request_SOC_meas = false; //soc handler requests SOC measurement conditions (listed in SOC handler) by seting this flag
     uint16_t current_htr_pwr = 0;
     uint8_t chrg_stat_ = 0;
     bool shortPressFlag = false;

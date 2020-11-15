@@ -61,6 +61,7 @@ void Indicator::led_handler(bool reset) {
     switch (loopCtrl[n]){
 
       case 0: //off
+        singleDone[n] = true;
         if(ledModes[n] == MODE_SLOW || ledModes[n] == MODE_FAST){
           loopCtrl[n] = 2;
         }
@@ -77,6 +78,7 @@ void Indicator::led_handler(bool reset) {
         break;
 
       case 1: //ful on
+        singleDone[n] = true;
         //flow control
         if(ledModes[n] == MODE_OFF){
           set_led(n, false);
@@ -96,6 +98,8 @@ void Indicator::led_handler(bool reset) {
 
 
       case 2: //blinking
+        singleDone[n] = true;
+
         if(ledModes[n] == MODE_SLOW){
           set_led(n, slowRamp<=SLOW_ON);
         }

@@ -37,6 +37,7 @@ void Hardware::init() {
 
 void Hardware::set_pwr_mosfet(bool state) {
   HAL_GPIO_WritePin(HTR_SW_CTRL_GPIO_Port, HTR_SW_CTRL_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+  last_pwrmos_flip = HAL_GetTick();
 }
 
 bool Hardware::is_pwr_mosfet_on() {
@@ -169,6 +170,10 @@ bool Hardware::is_charging() {
 }
 
 uint8_t Hardware::get_SOC() {
+  return SOC_val;
+}
+
+uint8_t Hardware::calculate_SOC() {
   static uint8_t loopCtrl = 1;
   static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
@@ -310,7 +315,7 @@ void Hardware::sleep() {
   soft_pwm_handler(false);
 
   stop_ADC(); //stop ADC/DMA
-  //set_vbat_sply(false); //disable vbat divider supply
+  set_vbat_sply(false); //disable vbat divider supply
   set_charging(true); //enable charging to prevent CE pulldown drain
   //enable RTC timer
   uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
@@ -329,6 +334,7 @@ void Hardware::sleep() {
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
   HAL_ResumeTick();
   set_vbat_sply(true); //enable vbat divider supply
+  last_divider_enable = HAL_GetTick();
   start_ADC();
   if(*btn_int_flag_pointer){
     wakeup_src = WAKE_SOURCE_BTN;
@@ -569,5 +575,39 @@ void Hardware::clear_button_flags() {
   is_button_longpress();
 }
 
+bool Hardware::is_vbat_sply_on() {
+  return HAL_GPIO_ReadPin(VBAT_SNS_CTRL_GPIO_Port, VBAT_SNS_CTRL_Pin);
+}
+
+bool Hardware::is_SOC_request_meas() {
+  return request_SOC_meas;
+}
+
+
+void Hardware::SOC_handler(bool reset) {
+  //check if battery is unloaded and divider is ON and settled and run SOC state machine. request unloading if SOC data is old.
+  //things to check: pwrmos OFF ; not charging ; divider ON ; enough time from divider ON ; enough time from pwrmos OFF
+  static uint32_t lastSOCcalc = 0;
+
+  uint32_t timeNow = HAL_GetTick();
+
+  if(timeNow - lastSOCcalc > SOC_MAX_INTERVAL){
+    request_SOC_meas = true;
+  }
+  else{
+    request_SOC_meas = false;
+  }
+
+  if( !is_pwr_mosfet_on()
+      && !is_charging()
+      && is_vbat_sply_on()
+      && timeNow - last_divider_enable > BAT_DIV_TCONST
+      && timeNow - last_pwrmos_flip > BAT_DIV_TCONST){
+
+    //run soc state machine
+    SOC_val = calculate_SOC();
+    lastSOCcalc = timeNow;
+  }
+}
 
 

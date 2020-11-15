@@ -261,7 +261,7 @@ void stateMachine(){
       }
       break;
 
-    case 6:
+    case 6: //todo: something gets f'ed here (stuck at case 6)
       // state actions:       #####
       leds.stop_blink();
       // state flowControl    #####
@@ -433,6 +433,14 @@ void stateMachine(){
     case 11:
       // state actions:       #####
       leds.slow_blink(1);
+
+      if(hardware.is_SOC_request_meas()){
+        hardware.set_charging(false);
+      }
+      else{
+        hardware.set_charging(true);
+      }
+
       if(hardware.is_sply_5V3A()){
         hardware.set_max_input_cur();
       }
@@ -462,6 +470,13 @@ void stateMachine(){
     case 12:
       // state actions:       #####
       leds.solid_on(1);
+
+      if(hardware.is_SOC_request_meas()){
+        hardware.set_charging(false);
+      }
+      else{
+        hardware.set_charging(true);
+      }
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
