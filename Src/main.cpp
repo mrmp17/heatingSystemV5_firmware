@@ -97,6 +97,7 @@ void blinkBattery(){
 void stateMachine(){
   static uint16_t loopCtrl = 0;
   static uint32_t stateTransitionTime = 0;
+  static uint32_t RTC_wake_counter = 1;
 
   switch(loopCtrl){
     case 0: //main inactive/sleep state
@@ -106,11 +107,13 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.wake_source() == WAKE_SOURCE_RTC){
+        RTC_wake_counter++;
         loopCtrl = 1;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.wake_source() == WAKE_SOURCE_BTN){
+        RTC_wake_counter = 0; //reset counter
         loopCtrl = 2;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -127,6 +130,9 @@ void stateMachine(){
         loopCtrl = 11;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
+      }
+      else if(RTC_wake_counter % SOC_RTC_NUM == 0 && HAL_GetTick() - stateTransitionTime < 3*BAT_DIV_TCONST){
+        //nothing to do, just wait to let SOC hanlder measure battery
       }
       else if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 3; //to low bat sleep
@@ -261,11 +267,11 @@ void stateMachine(){
       }
       break;
 
-    case 6: //todo: something gets f'ed here (stuck at case 6)
+    case 6:
       // state actions:       #####
       leds.stop_blink();
       // state flowControl    #####
-      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2)){
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //button must not be pressed to allow sleep
         loopCtrl = 3;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -423,7 +429,7 @@ void stateMachine(){
       // state actions:       #####
 
       // state flowControl    #####
-      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2)){
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){
         loopCtrl = 0;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -432,14 +438,24 @@ void stateMachine(){
       break;
     case 11:
       // state actions:       #####
-      leds.slow_blink(1);
+      switch(hardware.get_SOC()){
+        case SOC_0to10:
+          leds.slow_blink(2);
+          break;
+        case SOC_10to40:
+          leds.slow_blink(2);
+          break;
+        case SOC_40to70:
+          leds.slow_blink(2);
+          leds.slow_blink(1);
+          break;
+        case SOC_70to100:
+          leds.slow_blink(2);
+          leds.slow_blink(1);
+          leds.slow_blink(0);
+          break;
+      }
 
-      if(hardware.is_SOC_request_meas()){
-        hardware.set_charging(false);
-      }
-      else{
-        hardware.set_charging(true);
-      }
 
       if(hardware.is_sply_5V3A()){
         hardware.set_max_input_cur();
@@ -449,7 +465,14 @@ void stateMachine(){
       }
 
       // state flowControl    #####
-      if(!hardware.chrg_pgd()){ //charger disconnected
+      if(hardware.is_SOC_request_meas()){ //cant go form this state if request is active
+        hardware.set_charging(false);
+        hardware.confirm_SOC_request_meas();
+        loopCtrl = 14;
+        stateTransitionTime = HAL_GetTick();
+        hardware.trace(loopCtrl);
+      }
+      else if(!hardware.chrg_pgd()){ //charger disconnected
         hardware.set_default_input_cur();
         blinkBattery();
         loopCtrl = 10;
@@ -457,7 +480,7 @@ void stateMachine(){
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
-      else if(hardware.chrg_stat() == CHRG_STAT_IDLE){ //charging finished
+      else if(hardware.chrg_stat() == CHRG_STAT_IDLE && HAL_GetTick()){ //charging finished
         hardware.set_default_input_cur();
         loopCtrl = 12;
         stateTransitionTime = HAL_GetTick();
@@ -469,14 +492,10 @@ void stateMachine(){
       break;
     case 12:
       // state actions:       #####
+      leds.solid_on(0);
       leds.solid_on(1);
+      leds.solid_on(2);
 
-      if(hardware.is_SOC_request_meas()){
-        hardware.set_charging(false);
-      }
-      else{
-        hardware.set_charging(true);
-      }
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
@@ -511,6 +530,22 @@ void stateMachine(){
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
+        hardware.trace(loopCtrl);
+      }
+      break;
+
+    case 14:
+      if(!hardware.is_SOC_request_meas()){
+        hardware.set_charging(true);
+        if(hardware.chrg_stat() == CHRG_STAT_CHARGING || HAL_GetTick() - stateTransitionTime > 500){
+          loopCtrl = 11;
+          stateTransitionTime = HAL_GetTick();
+          hardware.trace(loopCtrl);
+        }
+      }
+      else if(HAL_GetTick() - stateTransitionTime > 500){
+        loopCtrl = 11;
+        stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       break;
@@ -555,6 +590,14 @@ int main(void)
   HAL_Delay(5000);
 
   hardware.init();
+
+  hardware.led_ctrl(0, true);
+  HAL_Delay(50);
+  hardware.led_ctrl(0, false);
+  HAL_Delay(100);
+  hardware.led_ctrl(0, true);
+  HAL_Delay(50);
+  hardware.led_ctrl(0, false);
 
   HAL_Delay(100);
 //  hardware.led_ctrl(2, true);
@@ -604,7 +647,22 @@ int main(void)
       hardware.button_handler(false);
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
+      hardware.SOC_handler(false);
 
+      if(hardware.is_button_superlongpress()){ //system resets if very long pres is detected. useful if state machine gets stuck
+        hardware.debug_print("resetting...\n");
+        hardware.led_ctrl(0, false);
+        hardware.led_ctrl(1, false);
+        hardware.led_ctrl(2, false);
+        hardware.led_ctrl(0, true);
+        HAL_Delay(50);
+        hardware.led_ctrl(0, false);
+        HAL_Delay(100);
+        hardware.led_ctrl(0, true);
+        HAL_Delay(50);
+        hardware.led_ctrl(0, false);
+        HAL_NVIC_SystemReset();
+      }
     }
     if(cnt%200 == 0){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());

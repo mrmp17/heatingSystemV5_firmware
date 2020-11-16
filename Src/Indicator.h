@@ -16,7 +16,7 @@
 #define FAST_ON 100
 #define FAST_OFF 100
 
-#define SINGLE_PRE 200
+#define SINGLE_PRE 400
 #define SINGLE_ON 1500
 #define SINGLE_POST 200
 

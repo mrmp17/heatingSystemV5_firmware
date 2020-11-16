@@ -44,8 +44,9 @@
 #define SOC_70to100 3
 #define SOC_DEAD 4
 #define SOC_HYST 20 //mV
-#define BAT_DIV_TCONST 60 //RC filter on battery divider takes 60ms to settle
-#define SOC_MAX_INTERVAL 5000 //SOC handler requests SOC measurement conditions after this many ms
+#define BAT_DIV_TCONST 80 //RC filter on battery divider takes 60ms to settle
+#define SOC_MAX_INTERVAL 10000 //SOC handler requests SOC measurement conditions after this many ms
+#define SOC_RTC_NUM 10 //alow some idle time for SOC measurement every __ RTC events
 
 
 #define BAT_RINT 90 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
@@ -69,6 +70,7 @@
 #define BUTTON_DBOUNCE_CYCLES 2
 #define BUTTON_SHORPTESS_CYCLES 5
 #define BUTTON_LONGPRESS_CYCLES 80
+#define BUTTON_SUPERLONG_CYCLES 350
 
 #define WAIT_LONGPRESS (HANDLER_PERIOD*BUTTON_LONGPRESS_CYCLES)+50
 
@@ -103,11 +105,14 @@ public:
     bool is_charging(); //checks if battery is charging
     uint8_t calculate_SOC(); //returns estimated battery state. see SOC_xtoy defines
     bool is_SOC_request_meas();
+    void confirm_SOC_request_meas();
+    uint32_t get_confirm_SOC_request_meas_time();
     uint8_t get_SOC();
     bool is_sply_5V3A(); //checks if 5V 3A type-C compatible power supply - charger is connected
     bool is_port_empty(); //returns true if nothing is connected to USB-C connector
     bool is_button_longpress(); //returns longpress flag and clears it
     bool is_button_shortpress(); //returns longpress flag and clears it
+    bool is_button_superlongpress();
     void clear_button_flags();
 
     void sleep(); //prepare and enter sleep, configures after sleep
@@ -130,6 +135,7 @@ public:
     void set_htr_det(bool state); //enable or disable heater detect pullup resistor (NOT USED)
     bool is_htr_det_on();
     bool get_button_state();
+    bool get_button_dbncd_state(); //returns debouned state of button
     void set_default_input_cur(); //sets default VBUS input current limit ~1A
     void set_max_input_cur(); //sets maximum VBUS input current limit ~3A
     uint16_t rel_htr_pwr(uint16_t power_mw); //returns relative heater power in %, required to get requested power ouptut
@@ -158,15 +164,18 @@ private:
     bool htr_det_state = false; //keeps state of heater detect functionality
     uint32_t last_pwrmos_flip = 0; //keeps the time of last power mosfet switch (used for battery voltage measurements)
     uint32_t last_divider_enable = 0; //keeps the time of last batter voltage divider turn-on event
+    uint32_t request_SOC_meas_confirm_time = 0; //time at which code granted SOC measurement conditions
     uint8_t SOC_val = SOC_10to40; //keeps battery SOC state
     bool request_SOC_meas = false; //soc handler requests SOC measurement conditions (listed in SOC handler) by seting this flag
     uint16_t current_htr_pwr = 0;
     uint8_t chrg_stat_ = 0;
     bool shortPressFlag = false;
     bool longPressFlag = false;
+    bool superLongPressFlag = false;
     bool buttonDebouncedState = false;
     bool *btn_int_flag_pointer;
     uint8_t wakeup_src = 0;
+    bool pwr_mos_state = false; //keeps the state of power mosfet
 
 
 };

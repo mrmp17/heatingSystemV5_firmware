@@ -36,8 +36,12 @@ void Hardware::init() {
 }
 
 void Hardware::set_pwr_mosfet(bool state) {
-  HAL_GPIO_WritePin(HTR_SW_CTRL_GPIO_Port, HTR_SW_CTRL_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
-  last_pwrmos_flip = HAL_GetTick();
+  if(state != pwr_mos_state){
+    HAL_GPIO_WritePin(HTR_SW_CTRL_GPIO_Port, HTR_SW_CTRL_Pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    pwr_mos_state = state;
+    last_pwrmos_flip = HAL_GetTick();
+  }
+
 }
 
 bool Hardware::is_pwr_mosfet_on() {
@@ -100,6 +104,10 @@ bool Hardware::chrg_pgd() {
 
 bool Hardware::get_button_state() {
   return HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
+}
+
+bool Hardware::get_button_dbncd_state() {
+  return buttonDebouncedState;
 }
 
 void Hardware::set_charging(bool state) {
@@ -166,7 +174,7 @@ bool Hardware::is_port_empty() {
 }
 
 bool Hardware::is_charging() {
-  return chrg_stat_ == 1;
+  return chrg_stat_ == CHRG_STAT_CHARGING;
 }
 
 uint8_t Hardware::get_SOC() {
@@ -178,13 +186,8 @@ uint8_t Hardware::calculate_SOC() {
   static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
 
+
   //return SOC_0to10;
-
-  //check if voltage compensation for internal resistance is needed
-  if(is_pwr_mosfet_on()){ //correct for internal resistance
-    voltage = voltage + (uint16_t)(((float)voltage/HTR_RESISTANCE)*BAT_RINT);
-  }
-
 
 
   switch (loopCtrl){
@@ -334,6 +337,7 @@ void Hardware::sleep() {
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
   HAL_ResumeTick();
   set_vbat_sply(true); //enable vbat divider supply
+  confirm_SOC_request_meas();
   last_divider_enable = HAL_GetTick();
   start_ADC();
   if(*btn_int_flag_pointer){
@@ -495,6 +499,7 @@ void Hardware::button_handler(bool reset) {
     //reset flags if called with reset parameter
     shortPressFlag = false;
     longPressFlag = false;
+    superLongPressFlag = false;
   }
 
   switch(loopCtrl){
@@ -534,6 +539,10 @@ void Hardware::button_handler(bool reset) {
       if(!get_button_state()){ //go to state 0 when button released
         loopCtrl = 0;
       }
+      else if(counter >= BUTTON_SUPERLONG_CYCLES){
+        superLongPressFlag = true;
+        counter = 0;
+      }
       break;
   }
   counter++;
@@ -550,6 +559,14 @@ bool Hardware::is_button_shortpress() {
 bool Hardware::is_button_longpress() {
   if(longPressFlag){
     longPressFlag = false;
+    return true;
+  }
+  else return false;
+}
+
+bool Hardware::is_button_superlongpress() {
+  if(superLongPressFlag){
+    superLongPressFlag = false;
     return true;
   }
   else return false;
@@ -573,20 +590,29 @@ void Hardware::clear_button_flags() {
   //clear both flags
   is_button_shortpress();
   is_button_longpress();
+  is_button_superlongpress();
 }
 
 bool Hardware::is_vbat_sply_on() {
-  return HAL_GPIO_ReadPin(VBAT_SNS_CTRL_GPIO_Port, VBAT_SNS_CTRL_Pin);
+  return !HAL_GPIO_ReadPin(VBAT_SNS_CTRL_GPIO_Port, VBAT_SNS_CTRL_Pin);
 }
 
 bool Hardware::is_SOC_request_meas() {
   return request_SOC_meas;
 }
 
+void Hardware::confirm_SOC_request_meas() {
+  request_SOC_meas_confirm_time = HAL_GetTick();
+}
+
+uint32_t Hardware::get_confirm_SOC_request_meas_time() {
+  return request_SOC_meas_confirm_time;
+}
+
 
 void Hardware::SOC_handler(bool reset) {
   //check if battery is unloaded and divider is ON and settled and run SOC state machine. request unloading if SOC data is old.
-  //things to check: pwrmos OFF ; not charging ; divider ON ; enough time from divider ON ; enough time from pwrmos OFF
+  //things to check: pwrmos OFF ; not charging ; divider ON ; enough time from divider ON ; enough time from pwrmos OFF ; BAT_DIV_TCONST from last request
   static uint32_t lastSOCcalc = 0;
 
   uint32_t timeNow = HAL_GetTick();
@@ -602,7 +628,8 @@ void Hardware::SOC_handler(bool reset) {
       && !is_charging()
       && is_vbat_sply_on()
       && timeNow - last_divider_enable > BAT_DIV_TCONST
-      && timeNow - last_pwrmos_flip > BAT_DIV_TCONST){
+      && timeNow - last_pwrmos_flip > BAT_DIV_TCONST
+      && timeNow - request_SOC_meas_confirm_time > BAT_DIV_TCONST){
 
     //run soc state machine
     SOC_val = calculate_SOC();
