@@ -320,6 +320,8 @@ void Hardware::sleep() {
   stop_ADC(); //stop ADC/DMA
   set_vbat_sply(false); //disable vbat divider supply
   set_charging(true); //enable charging to prevent CE pulldown drain
+  set_htr_det(false);
+  set_default_input_cur();
   //enable RTC timer
   uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
   HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, sleepTime, RTC_WAKEUPCLOCK_RTCCLK_DIV16); //set rtc interrupt for RTC_WAKE_TIME ms
@@ -537,9 +539,11 @@ void Hardware::button_handler(bool reset) {
 
     case 3: //waiting for button release after long press duration
       if(!get_button_state()){ //go to state 0 when button released
+        buttonDebouncedState = false;
         loopCtrl = 0;
       }
       else if(counter >= BUTTON_SUPERLONG_CYCLES){
+        buttonDebouncedState = false;
         superLongPressFlag = true;
         counter = 0;
       }

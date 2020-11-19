@@ -18,7 +18,7 @@
 
 #define SINGLE_PRE 400
 #define SINGLE_ON 1500
-#define SINGLE_POST 200
+#define SINGLE_POST 50
 
 #define MODE_OFF 0
 #define MODE_SLOW 1

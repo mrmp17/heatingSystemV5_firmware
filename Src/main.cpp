@@ -424,12 +424,11 @@ void stateMachine(){
 
       break;
 
-      //TODO: indicator functions needed
     case 10: //blink bat and go to sleep
       // state actions:       #####
 
       // state flowControl    #####
-      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //todo: bug here.
         loopCtrl = 0;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -537,13 +536,13 @@ void stateMachine(){
     case 14:
       if(!hardware.is_SOC_request_meas()){
         hardware.set_charging(true);
-        if(hardware.chrg_stat() == CHRG_STAT_CHARGING || HAL_GetTick() - stateTransitionTime > 500){
+        if(hardware.chrg_stat() == CHRG_STAT_CHARGING || HAL_GetTick() - stateTransitionTime > 500){ //todo: change this to get_confirm_SOC_request_meas_time??
           loopCtrl = 11;
           stateTransitionTime = HAL_GetTick();
           hardware.trace(loopCtrl);
         }
       }
-      else if(HAL_GetTick() - stateTransitionTime > 500){
+      else if(HAL_GetTick() - stateTransitionTime > 500){ //timeout
         loopCtrl = 11;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
