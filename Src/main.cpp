@@ -193,11 +193,13 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.wake_source() == WAKE_SOURCE_RTC){
+        RTC_wake_counter++;
         loopCtrl = 1;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
       else if(hardware.wake_source() == WAKE_SOURCE_BTN){
+        RTC_wake_counter = 0; //reset RTC counter
         loopCtrl = 2;
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
@@ -269,7 +271,6 @@ void stateMachine(){
 
     case 6:
       // state actions:       #####
-      leds.stop_blink();
       // state flowControl    #####
       if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //button must not be pressed to allow sleep
         loopCtrl = 3;
@@ -663,9 +664,10 @@ int main(void)
         HAL_NVIC_SystemReset();
       }
     }
-    if(cnt%200 == 0){
+    if(cnt%100 == 0){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
+
       cnt++;
     }
 
