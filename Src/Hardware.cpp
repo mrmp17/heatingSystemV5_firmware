@@ -186,6 +186,8 @@ uint8_t Hardware::calculate_SOC() {
   static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
 
+  vbat_compensated = voltage;
+
 
   //return SOC_0to10;
 
@@ -277,6 +279,7 @@ void Hardware::set_heating(uint16_t pwr_percent) {
 
 void Hardware::soft_pwm_handler(bool reset) {
   static uint8_t cnt = 0;
+  static bool waitSOC = false;
 
   if(reset){ //reset cunter ramp
     cnt = 0;
@@ -286,7 +289,17 @@ void Hardware::soft_pwm_handler(bool reset) {
     set_pwr_mosfet(false);
     cnt = 0; //reset counter so it starts at 0 at next turn-on
   }
+
+  else if(is_SOC_request_meas()){
+    if(!waitSOC){
+      set_pwr_mosfet(false);
+      waitSOC = true;
+    }
+  }
+
   else{
+    waitSOC = false;
+
     if(cnt < current_htr_pwr){
       set_pwr_mosfet(true);
       //led_ctrl(3, true);
@@ -319,9 +332,16 @@ void Hardware::sleep() {
 
   stop_ADC(); //stop ADC/DMA
   set_vbat_sply(false); //disable vbat divider supply
-  set_charging(true); //enable charging to prevent CE pulldown drain
-  set_htr_det(false);
+
   set_default_input_cur();
+  set_charging(true); //enable charging to prevent CE pulldown drain
+
+  set_htr_det(false);
+
+  led_ctrl(0, false);
+  led_ctrl(1, false);
+  led_ctrl(2, false);
+
   //enable RTC timer
   uint32_t sleepTime = ((uint32_t)RTC_WAKE_TIME*RTC_TICKS_PER_S)/1000; //2313 cycles per second at RCCCLK/16
   HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, sleepTime, RTC_WAKEUPCLOCK_RTCCLK_DIV16); //set rtc interrupt for RTC_WAKE_TIME ms

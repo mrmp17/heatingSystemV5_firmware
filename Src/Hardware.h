@@ -43,7 +43,7 @@
 #define SOC_40to70 2
 #define SOC_70to100 3
 #define SOC_DEAD 4
-#define SOC_HYST 20 //mV
+#define SOC_HYST 40 //mV
 #define BAT_DIV_TCONST 80 //RC filter on battery divider takes 60ms to settle
 #define SOC_MAX_INTERVAL 10000 //SOC handler requests SOC measurement conditions after this many ms
 #define SOC_RTC_NUM 10 //alow some idle time for SOC measurement every __ RTC events
@@ -61,14 +61,14 @@
 #define CHRG_STAT_ERROR 2
 
 //heating power defines
-#define HEAT_LOW 1500 //mW
-#define HEAT_MED 2000 //mW
-#define HEAT_HIGH 2600 //mW
+#define HEAT_LOW 1350 //mW
+#define HEAT_MED 1900 //mW
+#define HEAT_HIGH 2400 //mW
 #define HEAT_MAX 3500 //mW use only to preheat. not possible at low battery voltages
 
 //cycles correspond to time between handler calls
 #define BUTTON_DBOUNCE_CYCLES 2
-#define BUTTON_SHORPTESS_CYCLES 5
+#define BUTTON_SHORPTESS_CYCLES 0
 #define BUTTON_LONGPRESS_CYCLES 80
 #define BUTTON_SUPERLONG_CYCLES 350
 
@@ -149,6 +149,8 @@ public:
 
 
     uint32_t ADC_buffer[4] = {0}; //ADC buffer (filled by DMA)
+
+    uint16_t vbat_compensated = 0; //battery voltage updated only when SOC calculation runs (unloaded battery)
 
 
 

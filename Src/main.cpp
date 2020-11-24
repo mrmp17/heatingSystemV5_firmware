@@ -74,10 +74,10 @@ Indicator leds(&hardware);
 void blinkBattery(){
   switch(hardware.get_SOC()){
     case SOC_DEAD:
-      leds.single(2, true); //todo: this should be single FAST blinking
+      leds.single(2, true);
       break;
     case SOC_0to10:
-      leds.single(2, true); //todo: this should be single blinking
+      leds.single(2, true);
       break;
     case SOC_10to40:
       leds.single(2, false);
@@ -103,6 +103,7 @@ void stateMachine(){
     case 0: //main inactive/sleep state
       // state actions:       #####
       hardware.sleep();
+      leds.stop_blink();
       leds.led_handler(true); //call handler with reset
 
       // state flowControl    #####
@@ -189,7 +190,9 @@ void stateMachine(){
     case 3: //battery dead sleep state
       // state actions:       #####
       hardware.sleep();
-      //todo: further reduce power consumption
+      leds.stop_blink();
+      leds.led_handler(true);
+      //todo: further reduce power consumption?
 
       // state flowControl    #####
       if(hardware.wake_source() == WAKE_SOURCE_RTC){
@@ -286,6 +289,7 @@ void stateMachine(){
     case 7: //low heating
       // state actions:       #####
       hardware.set_heating(hardware.rel_htr_pwr(HEAT_LOW));
+
       if(hardware.get_SOC() == SOC_0to10){
         leds.solid_off(0);
         leds.solid_off(1);
@@ -395,6 +399,8 @@ void stateMachine(){
       // state flowControl    #####
       if(hardware.get_SOC() == SOC_DEAD){
         hardware.set_heating(0);
+        hardware.set_htr_det(false);
+        leds.stop_blink();
         blinkBattery();
         loopCtrl = 6;
         stateTransitionTime = HAL_GetTick();
@@ -429,7 +435,7 @@ void stateMachine(){
       // state actions:       #####
 
       // state flowControl    #####
-      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //todo: bug here.
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //todo: bug here. ???
         loopCtrl = 0;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -499,6 +505,7 @@ void stateMachine(){
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
+        hardware.set_default_input_cur();
         blinkBattery();
         loopCtrl = 10;
         stateTransitionTime = HAL_GetTick();
@@ -667,9 +674,10 @@ int main(void)
     if(cnt%100 == 0){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
-
+      hardware.debug_print("%d\n", hardware.vbat_compensated);
       cnt++;
     }
+
 
     stateMachine();
 

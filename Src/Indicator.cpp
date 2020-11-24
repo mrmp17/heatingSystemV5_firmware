@@ -57,7 +57,10 @@ void Indicator::led_handler(bool reset) {
 
 
   //state machine run once for every led
-  for(uint8_t n=0 ; n<NUM_LEDS ; n++){
+  for(uint8_t n=0 ; n<NUM_LEDS ; n++){ //turn off directly if set to off
+    if(ledModes[n] == MODE_OFF){
+      set_led(n, false);
+    }
     switch (loopCtrl[n]){
 
       case 0: //off
