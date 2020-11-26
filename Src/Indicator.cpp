@@ -162,11 +162,18 @@ void Indicator::led_handler(bool reset) {
         }
 
 
-        if(timeNow - ledTiming[n] > SINGLE_ON){
+        if((timeNow - ledTiming[n] > SINGLE_ON_SHORT) && singleShort[n]){ //single time for short enabled
           ledTiming[n] = timeNow;
           loopCtrl[n] = 5;
           set_led(n, false);
         }
+
+        else if(timeNow - ledTiming[n] > SINGLE_ON){ //single time for short disabled
+          ledTiming[n] = timeNow;
+          loopCtrl[n] = 5;
+          set_led(n, false);
+        }
+
         else if(ledModes[n] == MODE_OFF){
           loopCtrl[n] = 0;
           ledTiming[n] = 0;
@@ -250,9 +257,10 @@ void Indicator::stop_blink() {
   led_handler(false);
 }
 
-void Indicator::single(uint8_t led, bool blink) {
+void Indicator::single(uint8_t led, bool blink, bool shrt) {
   singleDone[led] = false;
   singleBlinking[led] = blink;
+  singleShort[led] = shrt;
   ledModes[led] = MODE_SINGLE;
 }
 

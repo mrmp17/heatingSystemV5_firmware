@@ -162,7 +162,8 @@ public:
 
 private:
 
-    const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3100}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
+    //const uint16_t soc_thr [5] = {3390, 3750, 3910, 2800, 3000}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD)
+    const uint16_t soc_thr [5] = {3256, 3612, 3886, 2800, 3000}; //thresholds for 10%, 40%, 70%, LOW and LOW_RELEASE (NO LOAD) (new calibration from data)
     bool htr_det_state = false; //keeps state of heater detect functionality
     uint32_t last_pwrmos_flip = 0; //keeps the time of last power mosfet switch (used for battery voltage measurements)
     uint32_t last_divider_enable = 0; //keeps the time of last batter voltage divider turn-on event

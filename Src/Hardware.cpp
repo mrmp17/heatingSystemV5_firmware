@@ -186,7 +186,7 @@ uint8_t Hardware::calculate_SOC() {
   static uint8_t soc = 0;
   uint16_t voltage = get_vbat();
 
-  vbat_compensated = voltage;
+  vbat_compensated = voltage; //no load voltage
 
 
   //return SOC_0to10;
@@ -202,7 +202,7 @@ uint8_t Hardware::calculate_SOC() {
       }
       break;
 
-    case 1: //SOC_10to40
+    case 1: //SOC_0to10
     soc = SOC_0to10;
     if(voltage < soc_thr[3]){
       loopCtrl = 0;
@@ -214,7 +214,7 @@ uint8_t Hardware::calculate_SOC() {
     }
       break;
 
-    case 2: //SOC_40to70
+    case 2: //SOC_10to40
       soc = SOC_10to40;
       if(voltage < soc_thr[0]){
         loopCtrl = 1;
@@ -226,7 +226,7 @@ uint8_t Hardware::calculate_SOC() {
       }
       break;
 
-    case 3: //SOC_70to100
+    case 3: //SOC_40to70
       soc = SOC_40to70;
       if(voltage < soc_thr[1]){
         loopCtrl = 2;

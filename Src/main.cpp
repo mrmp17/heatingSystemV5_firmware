@@ -74,22 +74,22 @@ Indicator leds(&hardware);
 void blinkBattery(){
   switch(hardware.get_SOC()){
     case SOC_DEAD:
-      leds.single(2, true);
+      leds.single(2, false, true);
       break;
     case SOC_0to10:
-      leds.single(2, true);
+      leds.single(2, true, false);
       break;
     case SOC_10to40:
-      leds.single(2, false);
+      leds.single(2, false, false);
       break;
     case SOC_40to70:
-      leds.single(2, false);
-      leds.single(1, false);
+      leds.single(2, false, false);
+      leds.single(1, false, false);
       break;
     case SOC_70to100:
-      leds.single(2, false);
-      leds.single(1, false);
-      leds.single(0, false);
+      leds.single(2, false, false);
+      leds.single(1, false, false);
+      leds.single(0, false, false);
       break;
   }
 }
@@ -445,8 +445,11 @@ void stateMachine(){
     case 11:
       // state actions:       #####
       switch(hardware.get_SOC()){
+        case SOC_DEAD:
+          leds.fast_blink(2);
+          break;
         case SOC_0to10:
-          leds.slow_blink(2);
+          leds.fast_blink(2);
           break;
         case SOC_10to40:
           leds.slow_blink(2);
@@ -655,6 +658,7 @@ int main(void)
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
       hardware.SOC_handler(false);
+      //hardware.debug_print("%d\n", hardware.get_vbat());
 
       if(hardware.is_button_superlongpress()){ //system resets if very long pres is detected. useful if state machine gets stuck
         hardware.debug_print("resetting...\n");
@@ -674,9 +678,26 @@ int main(void)
     if(cnt%100 == 0){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
-      hardware.debug_print("%d\n", hardware.vbat_compensated);
+      //hardware.debug_print("%d\n", hardware.vbat_compensated);
       cnt++;
     }
+
+//    leds.slow_blink(0);
+//    leds.slow_blink(1);
+//    leds.slow_blink(2);
+
+
+
+//    if(hardware.get_SOC() == SOC_0to10){
+//      leds.slow_blink(0);
+//      leds.slow_blink(1);
+//      leds.slow_blink(2);
+//    }
+//    else{
+//      leds.solid_on(0);
+//      leds.solid_on(1);
+//      leds.solid_on(2);
+//    }
 
 
     stateMachine();
