@@ -36,8 +36,8 @@ void MX_ADC_Init(void)
   */
   hadc.Instance = ADC1;
   hadc.Init.OversamplingMode = ENABLE;
-  hadc.Init.Oversample.Ratio = ADC_OVERSAMPLING_RATIO_128;
-  hadc.Init.Oversample.RightBitShift = ADC_RIGHTBITSHIFT_7;
+  hadc.Init.Oversample.Ratio = ADC_OVERSAMPLING_RATIO_32;
+  hadc.Init.Oversample.RightBitShift = ADC_RIGHTBITSHIFT_5;
   hadc.Init.Oversample.TriggeredMode = ADC_TRIGGEREDMODE_SINGLE_TRIGGER;
   hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc.Init.Resolution = ADC_RESOLUTION_12B;
@@ -87,6 +87,13 @@ void MX_ADC_Init(void)
   {
     Error_Handler();
   }
+  /** Configure for the selected ADC regular channel to be converted. 
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
@@ -132,9 +139,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 
     __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc);
 
-    /* ADC1 interrupt Init */
-    HAL_NVIC_SetPriority(ADC1_COMP_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(ADC1_COMP_IRQn);
   /* USER CODE BEGIN ADC1_MspInit 1 */
 
   /* USER CODE END ADC1_MspInit 1 */
@@ -162,9 +166,6 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(adcHandle->DMA_Handle);
-
-    /* ADC1 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(ADC1_COMP_IRQn);
   /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
   /* USER CODE END ADC1_MspDeInit 1 */

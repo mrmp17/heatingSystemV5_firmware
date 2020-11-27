@@ -51,29 +51,36 @@ bool Hardware::is_pwr_mosfet_on() {
 
 void Hardware::start_ADC() {
   HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED); //calibrate ADC //todo: how long does this take?
-  HAL_ADC_Start_DMA(&hadc, ADC_buffer, 4);
+  HAL_ADC_Start_DMA(&hadc, ADC_buffer, ADC_NUM_CH);
 }
 
 void Hardware::stop_ADC() {
   HAL_ADC_Stop_DMA(&hadc);
 }
 
+uint16_t Hardware::get_real_ADC_ref() {
+  return (uint16_t)(((float)VREF_INT_RAW/valid_raw_ADC[ADC_VREF])*ADC_REF);
+}
 
+uint16_t Hardware::get_vref() {
+  return ((valid_raw_ADC[ADC_VREF]*ADC_REF)/ADC_MAX_VAL); //return vref voltage in millivolts
+}
 
 uint16_t Hardware::get_vbat() {
-  return ((ADC_buffer[ADC_VBAT]*ADC_REF)/ADC_MAX_VAL)* ADC_VBAT_KOEF; //return battery voltage in millivolts
+  return ((valid_raw_ADC[ADC_VBAT]*get_real_ADC_ref())/ADC_MAX_VAL)* ADC_VBAT_KOEF; //return battery voltage in millivolts
+  //return ((ADC_buffer[ADC_VBAT]*ADC_REF)/ADC_MAX_VAL)* ADC_VBAT_KOEF; //return battery voltage in millivolts
 }
 
 uint16_t Hardware::get_UDP_volt() {
-  return ((ADC_buffer[ADC_UDP]*ADC_REF)/ADC_MAX_VAL); //return usb D+ voltage in millivolts
+  return ((valid_raw_ADC[ADC_UDP]*ADC_REF)/ADC_MAX_VAL); //return usb D+ voltage in millivolts
 }
 
 uint16_t Hardware::get_CC1_volt() {
-  return ((ADC_buffer[ADC_CC1]*ADC_REF)/ADC_MAX_VAL); //return CC1 voltage in millivolts
+  return ((valid_raw_ADC[ADC_CC1]*ADC_REF)/ADC_MAX_VAL); //return CC1 voltage in millivolts
 }
 
 uint16_t Hardware::get_CC2_volt() {
-  return ((ADC_buffer[ADC_CC2]*ADC_REF)/ADC_MAX_VAL); //return CC2 voltage in millivolts
+  return ((valid_raw_ADC[ADC_CC2]*ADC_REF)/ADC_MAX_VAL); //return CC2 voltage in millivolts
 }
 
 
@@ -658,6 +665,14 @@ void Hardware::SOC_handler(bool reset) {
     //run soc state machine
     SOC_val = calculate_SOC();
     lastSOCcalc = timeNow;
+  }
+}
+
+void Hardware::analog_handler(bool reset) {
+  if(HAL_GetTick() - led_flip_time > BAT_DIV_TCONST){
+    for(uint8_t n = 0 ; n<ADC_NUM_CH ; n++){
+      valid_raw_ADC[n] = ADC_buffer[n];
+    }
   }
 }
 

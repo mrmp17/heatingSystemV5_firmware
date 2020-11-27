@@ -653,12 +653,17 @@ int main(void)
     if(HAL_GetTick() - timing >= HANDLER_PERIOD && true){ //20ms event
       timing = HAL_GetTick();
       cnt++;
+      hardware.analog_handler(false);
       leds.led_handler(false);
       hardware.button_handler(false);
       hardware.soft_pwm_handler(false);
       hardware.chrg_stat_handler(false);
       hardware.SOC_handler(false);
+
+      //hardware.debug_print("%d\n", hardware.get_vref());
       //hardware.debug_print("%d\n", hardware.get_vbat());
+      //hardware.debug_print("%d\n", hardware.get_real_ADC_ref());
+      //hardware.debug_print("%d\n", hardware.vbat_compensated);
 
       if(hardware.is_button_superlongpress()){ //system resets if very long pres is detected. useful if state machine gets stuck
         hardware.debug_print("resetting...\n");
@@ -675,7 +680,7 @@ int main(void)
         HAL_NVIC_SystemReset();
       }
     }
-    if(cnt%100 == 0){
+    if(cnt%100 == 0 && false){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
       //hardware.debug_print("%d\n", hardware.vbat_compensated);

@@ -16,11 +16,15 @@
 #define STATE_TRACE true
 #define ENABLE_SLEEP true
 
-#define HANDLER_PERIOD 20
+#define ADC_NUM_CH 5
+
+#define HANDLER_PERIOD 10
 
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
 #define MCU_SPLY 2500
+#define VREF_INT 1224
+#define VREF_INT_RAW 2005 //adc should return this raw value when measuring internal reference voltage, if Vcc is 2500mV
 #define ADC_VBAT_KOEF 2
 
 #define HTR_RESISTANCE 2900 //mOhm
@@ -29,6 +33,7 @@
 #define ADC_CC2 1
 #define ADC_VBAT 2
 #define ADC_UDP 3
+#define ADC_VREF 4
 
 #define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
@@ -43,8 +48,8 @@
 #define SOC_40to70 2
 #define SOC_70to100 3
 #define SOC_DEAD 4
-#define SOC_HYST 40 //mV
-#define BAT_DIV_TCONST 80 //RC filter on battery divider takes 60ms to settle
+#define SOC_HYST 25 //mV
+#define BAT_DIV_TCONST 60 //RC filter on battery divider takes 60ms to settle
 #define SOC_MAX_INTERVAL 10000 //SOC handler requests SOC measurement conditions after this many ms
 #define SOC_RTC_NUM 10 //alow some idle time for SOC measurement every __ RTC events
 
@@ -96,6 +101,7 @@ public:
     void chrg_stat_handler(bool reset);
     void button_handler(bool reset);
     void SOC_handler(bool reset);
+    void analog_handler(bool reset);
 
     void start_ADC(); //starts ADC conversions.
     void stop_ADC(); //stops ADC conversions
@@ -126,6 +132,8 @@ public:
     uint16_t get_CC1_volt(); //gets CC1 pin voltage
     uint16_t get_CC2_volt(); //gets CC2 pin voltage
     uint16_t get_vbat(); //gets battery voltage
+    uint16_t get_vref();
+    uint16_t get_real_ADC_ref(); //reutrns real ADC reference, reverse measured via internal voltage reference
     uint16_t get_UDP_volt(); //gets USB data positive voltage
     void set_vbat_sply(bool state); //turns on/off vbat resistor divider supply (GND)
     bool is_vbat_sply_on();
@@ -148,7 +156,9 @@ public:
     uint32_t handler_counter = 0; //increments every time handler executes
 
 
-    uint32_t ADC_buffer[4] = {0}; //ADC buffer (filled by DMA)
+    uint32_t ADC_buffer[ADC_NUM_CH] = {0}; //ADC buffer (filled by DMA)
+
+    uint32_t led_flip_time = 0;
 
     uint16_t vbat_compensated = 0; //battery voltage updated only when SOC calculation runs (unloaded battery)
 
@@ -179,6 +189,8 @@ private:
     bool *btn_int_flag_pointer;
     uint8_t wakeup_src = 0;
     bool pwr_mos_state = false; //keeps the state of power mosfet
+
+    uint16_t valid_raw_ADC[ADC_NUM_CH] = {0};
 
 
 };

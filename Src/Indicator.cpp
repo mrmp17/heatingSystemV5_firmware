@@ -269,6 +269,12 @@ bool Indicator::is_single_done(uint8_t led) {
 }
 
 void Indicator::set_led(uint8_t led, bool state) {
-  hw_driver->led_ctrl(led, state);
+  static uint8_t prevLedState[NUM_LEDS] = {0};
+  if(state != prevLedState[led]){
+    hw_driver->led_ctrl(led, state);
+    hw_driver->led_flip_time = HAL_GetTick();
+  }
+  prevLedState[led] = state;
+
 }
 
