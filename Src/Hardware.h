@@ -18,7 +18,7 @@
 
 #define ADC_NUM_CH 5
 
-#define HANDLER_PERIOD 10
+#define HANDLER_PERIOD 20
 
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
