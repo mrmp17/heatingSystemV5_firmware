@@ -209,7 +209,6 @@ void stateMachine(){
       }
       break;
 
-      //TODO: indicator functions needed
     case 4: //blink battery and go to heating stuff
       // state actions:       #####
 
@@ -435,7 +434,7 @@ void stateMachine(){
       // state actions:       #####
 
       // state flowControl    #####
-      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){ //todo: bug here. ???
+      if(leds.is_single_done(0) && leds.is_single_done(1) && leds.is_single_done(2) && !hardware.get_button_dbncd_state()){
         loopCtrl = 0;
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -636,7 +635,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    //TODO: check clock config at next cubemx update
     static uint32_t timing = 0;
     static uint32_t cnt = 0;
 

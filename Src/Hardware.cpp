@@ -50,7 +50,7 @@ bool Hardware::is_pwr_mosfet_on() {
 
 
 void Hardware::start_ADC() {
-  HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED); //calibrate ADC //todo: how long does this take?
+  HAL_ADCEx_Calibration_Start(&hadc, ADC_SINGLE_ENDED); //calibrate ADC
   HAL_ADC_Start_DMA(&hadc, ADC_buffer, ADC_NUM_CH);
 }
 
@@ -143,7 +143,6 @@ void Hardware::set_htr_det(bool state) {
   }
   htr_det_state = state; //save current state
 
-  //TODO
 }
 
 void Hardware::set_default_input_cur() {
@@ -431,38 +430,13 @@ void Hardware::config_gpio_slp() {
   //set pins to analog mode to reduce power consumption (digital input stage disabled in this mode)
   //todo: what to do with usart and swd pins?
 
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  //port C
-  GPIO_InitStruct = {0};
-  GPIO_InitStruct.Pin = CH_ILIM_CTRL_Pin | CH_CE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  //port A
-  GPIO_InitStruct = {0};
-  GPIO_InitStruct.Pin = USB_CC1_ANALOG_Pin | USB_CC2_ANALOG_Pin | VBAT_SNS_Pin | VBAT_SNS_CTRL_Pin | HTR_DET_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  //port B
-  GPIO_InitStruct = {0};
-  GPIO_InitStruct.Pin = CH_STAT_Pin | CH_PG_Pin | HTR_SW_CTRL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
 }
 
 void Hardware::config_gpio_wake() {
   //set gpios back to normal state
-  MX_GPIO_Init();
 }
 
 void Hardware::chrg_stat_handler(bool reset) {
-  //todo: test
   //detects if charger reports:
   // - charging complete / sleep: pin HIGH
   // - charging in progress: pin LOW
@@ -522,7 +496,6 @@ void Hardware::button_handler(bool reset) {
 
   if(reset){
     counter = 0;
-    //TODO
     //if button is being held down before sleep, we don't want long press flag after longpress duration after sleep every time MCU wakes up
     loopCtrl = 0;
     //reset flags if called with reset parameter
