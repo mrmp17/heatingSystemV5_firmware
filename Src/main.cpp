@@ -445,15 +445,22 @@ void stateMachine(){
       // state actions:       #####
       switch(hardware.get_SOC()){
         case SOC_DEAD:
+          leds.solid_off(0);
+          leds.solid_off(1);
           leds.fast_blink(2);
           break;
         case SOC_0to10:
+          leds.solid_off(0);
+          leds.solid_off(1);
           leds.fast_blink(2);
           break;
         case SOC_10to40:
+          leds.solid_off(0);
+          leds.solid_off(1);
           leds.slow_blink(2);
           break;
         case SOC_40to70:
+          leds.solid_off(0);
           leds.slow_blink(2);
           leds.slow_blink(1);
           break;
@@ -639,13 +646,7 @@ int main(void)
     static uint32_t cnt = 0;
 
     //start testing
-//    while (1){
-//      leds.led_handler(false);
-//      leds.slow_blink(2);
-//      leds.slow_blink(1);
-//      leds.solid_off(0);
-//      //HAL_Delay(20);
-//    }
+
     //end testing
 
     if(HAL_GetTick() - timing >= HANDLER_PERIOD && true){ //20ms event
@@ -678,10 +679,10 @@ int main(void)
         HAL_NVIC_SystemReset();
       }
     }
-    if(cnt%100 == 0 && false){
+    if(cnt%300 == 0 && true){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
-      //hardware.debug_print("%d\n", hardware.vbat_compensated);
+      hardware.debug_print("V:%d S:%d\n", hardware.vbat_compensated, hardware.get_SOC());
       cnt++;
     }
 

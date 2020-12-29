@@ -13,7 +13,7 @@
 #include "gpio.h"
 #include "rtc.h"
 
-#define STATE_TRACE false
+#define STATE_TRACE true
 #define ENABLE_SLEEP true
 
 #define ADC_NUM_CH 5

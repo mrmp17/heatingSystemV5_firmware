@@ -365,6 +365,7 @@ void Hardware::sleep() {
   HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
   HAL_ResumeTick();
   set_vbat_sply(true); //enable vbat divider supply
+  set_charging(false);
   confirm_SOC_request_meas();
   last_divider_enable = HAL_GetTick();
   start_ADC();
