@@ -9,48 +9,48 @@ Indicator::Indicator(Hardware *obj) {
 }
 
 void Indicator::led_handler(bool reset) {
-  static uint8_t loopCtrl[NUM_LEDS] = {0};
-  static uint32_t ledTiming[NUM_LEDS] = {0};
-  static uint32_t lastHandlerTime = 0;
 
   uint32_t timeNow = HAL_GetTick();
 
   if(reset){
     for(uint8_t n=0 ; n<NUM_LEDS ; n++){
       ledModes[n] = 0;
-      slowRamp = 0;
-      fastRamp = 0;
+      slowRampCnt = 0;
+      fastRampCnt = 0;
       lastHandlerTime = timeNow;
     }
   }
+
+  uint32_t dt = timeNow - lastHandlerTime;
+
   //ramp generator
-  if(timeNow-lastHandlerTime >= MAX_HANDLER_dT){
-    lastHandlerTime = timeNow-MAX_HANDLER_dT;
+  if(dt >= MAX_HANDLER_dT){
+    dt = MAX_HANDLER_dT;
     //something's f'd if this happens
   }
   //slow ramp
-  if(slowRamp < SLOW_ON + SLOW_OFF){
-    if(timeNow - lastHandlerTime > SLOW_ON + SLOW_OFF - slowRamp){
-      slowRamp = (timeNow-lastHandlerTime) - (SLOW_ON + SLOW_OFF - slowRamp);
+  if(slowRampCnt < SLOW_ON + SLOW_OFF){
+    if(dt > SLOW_ON + SLOW_OFF - slowRampCnt){
+      slowRampCnt = dt - (SLOW_ON + SLOW_OFF - slowRampCnt);
     }
     else{
-      slowRamp += timeNow-lastHandlerTime;
+      slowRampCnt += dt;
     }
   }
   else{
-    slowRamp = timeNow-lastHandlerTime;
+    slowRampCnt = dt;
   }
   //fast ramp
-  if(fastRamp < FAST_ON + FAST_OFF){
-    if(timeNow - lastHandlerTime > FAST_ON + FAST_OFF - fastRamp){
-      fastRamp = (timeNow-lastHandlerTime) - (FAST_ON + FAST_OFF - fastRamp);
+  if(fastRampCnt < FAST_ON + FAST_OFF){
+    if(dt > FAST_ON + FAST_OFF - fastRampCnt){
+      fastRampCnt = dt - (FAST_ON + FAST_OFF - fastRampCnt);
     }
     else{
-      fastRamp += timeNow-lastHandlerTime;
+      fastRampCnt += dt;
     }
   }
   else{
-    fastRamp = timeNow-lastHandlerTime;
+    fastRampCnt = dt;
   }
 
   lastHandlerTime = timeNow;
@@ -80,7 +80,7 @@ void Indicator::led_handler(bool reset) {
         }
         break;
 
-      case 1: //ful on
+      case 1: //full on
         singleDone[n] = true;
         //flow control
         if(ledModes[n] == MODE_OFF){
@@ -104,10 +104,10 @@ void Indicator::led_handler(bool reset) {
         singleDone[n] = true;
 
         if(ledModes[n] == MODE_SLOW){
-          set_led(n, slowRamp<=SLOW_ON);
+          set_led(n, slowRampCnt<=SLOW_ON);
         }
         else if(ledModes[n] == MODE_FAST){
-          set_led(n, fastRamp<=FAST_ON);
+          set_led(n, fastRampCnt<=FAST_ON);
         }
 
         //flow control
@@ -158,9 +158,8 @@ void Indicator::led_handler(bool reset) {
       case 4: //single on
 
         if(singleBlinking[n]){
-          set_led(n, fastRamp<=FAST_ON);
+          set_led(n, fastRampCnt<=FAST_ON);
         }
-
 
         if((timeNow - ledTiming[n] > SINGLE_ON_SHORT) && singleShort[n]){ //single time for short enabled
           ledTiming[n] = timeNow;
@@ -195,6 +194,7 @@ void Indicator::led_handler(bool reset) {
 
       case 5: //single post off
         if(timeNow - ledTiming[n] > SINGLE_POST){ //single is done, reset mode to off
+          //TODO implement switching to prev mode instead of off if desired
           ledTiming[n] = 0;
           singleDone[n] = true;
           ledModes[n] = MODE_OFF;
@@ -220,33 +220,32 @@ void Indicator::led_handler(bool reset) {
           singleDone[n] = true;
         }
         break;
-
-
-
     }
   }
 }
 
 
-
-
-
-
-
-
 void Indicator::slow_blink(uint8_t led) {
+  if (led > NUM_LEDS-1)
+    return;
   ledModes[led] = MODE_SLOW;
 }
 
 void Indicator::fast_blink(uint8_t led) {
+  if (led > NUM_LEDS-1)
+    return;
   ledModes[led] = MODE_FAST;
 }
 
 void Indicator::solid_on(uint8_t led) {
+  if (led > NUM_LEDS-1)
+    return;
   ledModes[led] = MODE_SOLID;
 }
 
 void Indicator::solid_off(uint8_t led) {
+  if (led > NUM_LEDS-1)
+    return;
   ledModes[led] = MODE_OFF;
 }
 
@@ -258,6 +257,8 @@ void Indicator::stop_blink() {
 }
 
 void Indicator::single(uint8_t led, bool blink, bool shrt) {
+  if (led > NUM_LEDS-1)
+    return;
   singleDone[led] = false;
   singleBlinking[led] = blink;
   singleShort[led] = shrt;
@@ -265,11 +266,14 @@ void Indicator::single(uint8_t led, bool blink, bool shrt) {
 }
 
 bool Indicator::is_single_done(uint8_t led) {
+  if (led > NUM_LEDS-1)
+    return false;
   return singleDone[led];
 }
 
 void Indicator::set_led(uint8_t led, bool state) {
-  static uint8_t prevLedState[NUM_LEDS] = {0};
+  if (led > NUM_LEDS-1)
+    return;
   if(state != prevLedState[led]){
     hw_driver->led_ctrl(led, state);
     hw_driver->led_flip_time = HAL_GetTick();

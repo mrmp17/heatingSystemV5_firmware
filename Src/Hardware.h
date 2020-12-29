@@ -158,7 +158,7 @@ public:
 
     uint32_t ADC_buffer[ADC_NUM_CH] = {0}; //ADC buffer (filled by DMA)
 
-    uint32_t led_flip_time = 0;
+    uint32_t led_flip_time = 0; // time of last LED flip
 
     uint16_t vbat_compensated = 0; //battery voltage updated only when SOC calculation runs (unloaded battery)
 

@@ -5,10 +5,10 @@
 #ifndef HEATINGSYSTEMV5_INDICATOR_H
 #define HEATINGSYSTEMV5_INDICATOR_H
 
-
 #include <stdint.h>
 #include "stm32l0xx_hal.h"
 #include "Hardware.h"
+
 #define NUM_LEDS 3
 
 #define SLOW_ON 500
@@ -45,24 +45,24 @@ public:
     void single(uint8_t led, bool blink, bool shrt); //one shot event with blinking and short blink flag
     bool is_single_done(uint8_t led);
 
-
-
 private:
 
     void set_led(uint8_t led, bool state);
 
     uint8_t ledModes[NUM_LEDS] = {0};
     bool singleDone[NUM_LEDS] = {true, true, true};
-    bool singleBlinking[NUM_LEDS] = {0};
-    bool singleShort[NUM_LEDS] = {0};
+    bool singleBlinking[NUM_LEDS] = {false};
+    bool singleShort[NUM_LEDS] = {false};
+    bool prevLedState[NUM_LEDS] = {false};
 
-    uint32_t slowRamp = 0;
-    uint32_t fastRamp = 0;
+    uint32_t slowRampCnt = 0;
+    uint32_t fastRampCnt = 0;
 
     Hardware *hw_driver;
 
-
-
+    uint8_t loopCtrl[NUM_LEDS] = {0};
+    uint32_t ledTiming[NUM_LEDS] = {0};
+    uint32_t lastHandlerTime = 0;
 
 };
 
