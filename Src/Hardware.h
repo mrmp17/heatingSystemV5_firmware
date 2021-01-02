@@ -39,8 +39,8 @@
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define PORT_EMPTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
-#define UDP_HTR_MIN 1188
-#define UDP_HTR_MAX 1313
+#define UDP_HTR_MIN 1188 //USB data+ pin range min for heater detection
+#define UDP_HTR_MAX 1313 //USB data+ pin range max for heater detection
 
 //bat SOC definitions
 #define SOC_0to10 0
@@ -51,10 +51,10 @@
 #define SOC_HYST 25 //mV
 #define BAT_DIV_TCONST 60 //RC filter on battery divider takes 60ms to settle
 #define SOC_MAX_INTERVAL 10000 //SOC handler requests SOC measurement conditions after this many ms
-#define SOC_RTC_NUM 10 //alow some idle time for SOC measurement every __ RTC events
+#define SOC_RTC_NUM 10 //allow some idle time for SOC measurement every __ RTC events
 
 
-#define BAT_RINT 90 //internal resistance in miliohms (todo: set to correct value, this includes test cables)
+#define BAT_RINT 90 //internal resistance in milliohms (todo: set to correct value, this includes test cables)
 
 #define WAKE_SOURCE_BTN 0
 #define WAKE_SOURCE_RTC 1
@@ -87,7 +87,7 @@
 class Hardware {
 
 public:
-    Hardware(bool *btn_interrupt_flag_pointer);
+    explicit Hardware(bool *btn_interrupt_flag_pointer);
 
 
     void init(); //initializes hardware
@@ -96,6 +96,7 @@ public:
     void debug_print(const char *format, ...);
 
     //reset parameter in handlers resets state machines and timing variables. Call handlers with reset=1 right after wake-up from sleep
+    //TODO: make separate reset functions
     void main_handler(); //call this every x ms
     void soft_pwm_handler(bool reset); //call this in handler
     void chrg_stat_handler(bool reset);
@@ -109,7 +110,6 @@ public:
     bool is_htr_connected(); //checks if heater cable is connected
     void set_heating(uint16_t value); //enables heating/sets heating power. this is ABSOLUTE HEATING POWER - PWM DUTY
     bool is_charging(); //checks if battery is charging
-    uint8_t calculate_SOC(); //returns estimated battery state. see SOC_xtoy defines
     bool is_SOC_request_meas();
     void confirm_SOC_request_meas();
     uint32_t get_confirm_SOC_request_meas_time();
@@ -150,7 +150,7 @@ public:
     void trace(uint16_t state_num);
 
     void config_clk_wake();
-    void config_gpio_slp(); //not used currently //todo: not updated
+    void config_gpio_sleep(); //not used currently //todo: not updated
     void config_gpio_wake(); //not used currently //todo: not updated
 
     uint32_t handler_counter = 0; //increments every time handler executes
@@ -159,8 +159,6 @@ public:
     uint32_t ADC_buffer[ADC_NUM_CH] = {0}; //ADC buffer (filled by DMA)
 
     uint32_t led_flip_time = 0; // time of last LED flip
-
-    uint16_t vbat_compensated = 0; //battery voltage updated only when SOC calculation runs (unloaded battery)
 
 
 
@@ -182,16 +180,33 @@ private:
     bool request_SOC_meas = false; //soc handler requests SOC measurement conditions (listed in SOC handler) by seting this flag
     uint16_t current_htr_pwr = 0;
     uint8_t chrg_stat_ = 0;
-    bool shortPressFlag = false;
-    bool longPressFlag = false;
-    bool superLongPressFlag = false;
-    bool buttonDebouncedState = false;
-    bool *btn_int_flag_pointer;
     uint8_t wakeup_src = 0;
     bool pwr_mos_state = false; //keeps the state of power mosfet
 
     uint16_t valid_raw_ADC[ADC_NUM_CH] = {0};
 
+    uint8_t soc_loop_ctrl = 1;
+    uint32_t lastSOCcalc = 0;
+
+    // heater
+    uint8_t heater_soft_pwm_cnt = 0;
+    bool heater_wait_SOC = false;
+
+    // charge state
+    uint32_t charge_pin_last_edge_time = 0;
+    bool charge_last_pin_state = false;
+    const uint32_t charge_error_interval = 1000;
+    uint32_t charge_blink_counter = 0; //counts valid on-after-another blinks
+
+    // button
+    // TODO: button could be a separate class - more reusable
+    uint8_t button_loop_ctrl = 0;
+    uint32_t button_counter = 0;
+    bool shortPressFlag = false;
+    bool longPressFlag = false;
+    bool superLongPressFlag = false;
+    bool buttonDebouncedState = false;
+    bool *btn_int_flag_pointer;
 
 };
 

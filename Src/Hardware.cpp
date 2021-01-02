@@ -187,74 +187,6 @@ uint8_t Hardware::get_SOC() {
   return SOC_val;
 }
 
-uint8_t Hardware::calculate_SOC() {
-  static uint8_t loopCtrl = 1;
-  static uint8_t soc = 0;
-  uint16_t voltage = get_vbat();
-
-  vbat_compensated = voltage; //no load voltage
-
-
-  //return SOC_0to10;
-
-
-  switch (loopCtrl){
-
-    case 0: //SOC_DEAD
-      soc = SOC_DEAD;
-      if(voltage > soc_thr[4]){
-        loopCtrl = 1;
-        soc = SOC_0to10;
-      }
-      break;
-
-    case 1: //SOC_0to10
-    soc = SOC_0to10;
-    if(voltage < soc_thr[3]){
-      loopCtrl = 0;
-      soc = SOC_DEAD;
-    }
-    else if(voltage > soc_thr[0]+SOC_HYST){
-      loopCtrl = 2;
-      soc = SOC_10to40;
-    }
-      break;
-
-    case 2: //SOC_10to40
-      soc = SOC_10to40;
-      if(voltage < soc_thr[0]){
-        loopCtrl = 1;
-        soc = SOC_0to10;
-      }
-      else if(voltage > soc_thr[1]+SOC_HYST){
-        loopCtrl = 3;
-        soc = SOC_40to70;
-      }
-      break;
-
-    case 3: //SOC_40to70
-      soc = SOC_40to70;
-      if(voltage < soc_thr[1]){
-        loopCtrl = 2;
-        soc = SOC_10to40;
-      }
-      else if(voltage > soc_thr[2]+SOC_HYST){
-        loopCtrl = 4;
-        soc = SOC_70to100;
-      }
-      break;
-    case 4: //SOC_70to100
-      soc = SOC_70to100;
-      if(voltage < soc_thr[2]){
-        loopCtrl = 3;
-        soc = SOC_40to70;
-      }
-      break;
-  }
-
-  return soc;
-}
-
 bool Hardware::is_htr_connected() {
   if(!htr_det_state){
     return false; //return false if detection circuit is not ON
@@ -284,29 +216,27 @@ void Hardware::set_heating(uint16_t pwr_percent) {
 }
 
 void Hardware::soft_pwm_handler(bool reset) {
-  static uint8_t cnt = 0;
-  static bool waitSOC = false;
 
   if(reset){ //reset cunter ramp
-    cnt = 0;
+    heater_soft_pwm_cnt = 0;
   }
 
   if(current_htr_pwr == 0){
     set_pwr_mosfet(false);
-    cnt = 0; //reset counter so it starts at 0 at next turn-on
+    heater_soft_pwm_cnt = 0; //reset counter so it starts at 0 at next turn-on
   }
 
   else if(is_SOC_request_meas()){
-    if(!waitSOC){
+    if(!heater_wait_SOC){
       set_pwr_mosfet(false);
-      waitSOC = true;
+      heater_wait_SOC = true;
     }
   }
 
   else{
-    waitSOC = false;
+    heater_wait_SOC = false;
 
-    if(cnt < current_htr_pwr){
+    if(heater_soft_pwm_cnt < current_htr_pwr){
       set_pwr_mosfet(true);
       //led_ctrl(3, true);
     }
@@ -316,11 +246,11 @@ void Hardware::soft_pwm_handler(bool reset) {
     }
 
     //ramp generator
-    if(cnt < 100){
-      cnt++;
+    if(heater_soft_pwm_cnt < 100){
+      heater_soft_pwm_cnt++;
     }
     else{
-      cnt = 0;
+      heater_soft_pwm_cnt = 0;
     }
   }
 }
@@ -427,7 +357,7 @@ void Hardware::config_clk_wake() {
   //end clock configuration
 }
 
-void Hardware::config_gpio_slp() {
+void Hardware::config_gpio_sleep() {
   //set pins to analog mode to reduce power consumption (digital input stage disabled in this mode)
   //todo: what to do with usart and swd pins?
 
@@ -442,48 +372,44 @@ void Hardware::chrg_stat_handler(bool reset) {
   // - charging complete / sleep: pin HIGH
   // - charging in progress: pin LOW
   // - charging suspended: pin BLINKING 1Hz
-  static uint32_t lastEdgeTime = 0;
-  static bool lastState = false;
-  static const uint32_t errorInterval = 1000;
-  static uint32_t blinkCounter = 0; //counts valid on-after-another blinks
 
   if(reset){ //resets timing and blink counter
-    lastEdgeTime = 0;
-    lastState = false;
-    blinkCounter = 0;
+    charge_pin_last_edge_time = 0;
+    charge_last_pin_state = false;
+    charge_blink_counter = 0;
   }
 
-  bool state = HAL_GPIO_ReadPin(CH_STAT_GPIO_Port, CH_STAT_Pin) ? true : false;
-  if(state != lastState){ // edge event
+  bool pin_state = HAL_GPIO_ReadPin(CH_STAT_GPIO_Port, CH_STAT_Pin) ? true : false;
+  if(pin_state != charge_last_pin_state){ // edge event
     uint32_t time = HAL_GetTick();
-    uint32_t timeFromLast = time - lastEdgeTime;
-    if(timeFromLast > errorInterval-50 && timeFromLast < errorInterval+50){ //1 second from last edge
-      blinkCounter++;
+    uint32_t timeFromLast = time - charge_pin_last_edge_time;
+    if(timeFromLast > charge_error_interval-50 && timeFromLast < charge_error_interval+50){ //1 second from last edge
+      charge_blink_counter++;
     }
     else{
-      blinkCounter = 0; //last edge was not 1 second ago, reset blinkCounter
+      charge_blink_counter = 0; //last edge was not 1 second ago, reset charge_blink_counter
     }
-    if(blinkCounter > 2){
+    if(charge_blink_counter > 2){
       chrg_stat_ = CHRG_STAT_ERROR;
     }
-    else if(state == true){
+    else if(pin_state){
       chrg_stat_ = CHRG_STAT_IDLE;
     }
-    else if(state == false){
+    else{
       chrg_stat_ = CHRG_STAT_CHARGING;
     }
-    lastEdgeTime = time; //save time
-    lastState = state; //save state
+    charge_pin_last_edge_time = time; //save time
+    charge_last_pin_state = pin_state; //save state
   }
-  else if(HAL_GetTick()-lastEdgeTime > 1500){
-    if(state == true){
+  else if(HAL_GetTick()-charge_pin_last_edge_time > 1500){
+    if(pin_state){
       chrg_stat_ = CHRG_STAT_IDLE;
     }
-    else if(state == false){
+    else{
       chrg_stat_ = CHRG_STAT_CHARGING;
     }
-    lastEdgeTime = HAL_GetTick();
-    lastState = state;
+    charge_pin_last_edge_time = HAL_GetTick();
+    charge_last_pin_state = pin_state;
   }
 }
 
@@ -492,65 +418,66 @@ uint8_t Hardware::chrg_stat() {
 }
 
 void Hardware::button_handler(bool reset) {
-  static uint8_t loopCtrl = 0;
-  static uint32_t counter = 0;
 
   if(reset){
-    counter = 0;
+    button_counter = 0; // TODO: why not use time? - should be unified across all handlers
     //if button is being held down before sleep, we don't want long press flag after longpress duration after sleep every time MCU wakes up
-    loopCtrl = 0;
+    button_loop_ctrl = 0;
     //reset flags if called with reset parameter
     shortPressFlag = false;
     longPressFlag = false;
     superLongPressFlag = false;
   }
 
-  switch(loopCtrl){
+  switch(button_loop_ctrl){
     case 0: //waiting for button press
       if(get_button_state()){ //is button pressed?
-        counter = 0;
-        loopCtrl = 1;
+        button_counter = 0;
+        button_loop_ctrl = 1;
       }
       break;
     case 1: //waiting for debounce period
-      if(counter >= BUTTON_DBOUNCE_CYCLES){
+      if(button_counter >= BUTTON_DBOUNCE_CYCLES){
         if(get_button_state()){ //button still pressed after debounce time
           buttonDebouncedState = true;
-          loopCtrl = 2; //go wait for short press time
+          button_loop_ctrl = 2; //go wait for short press time
         }
         else{ //button is not pressed anymore
           buttonDebouncedState = false;
-          loopCtrl = 0; //go back to state 0
+          button_loop_ctrl = 0; //go back to state 0
         }
       }
       break;
     case 2: //button is pressed, waiting for short and long press
       if(!get_button_state()){ //button released
-        if(counter >= BUTTON_SHORPTESS_CYCLES){ //button was pressed for correct time to trigger short press event
+        if(button_counter >= BUTTON_SHORPTESS_CYCLES){ //button was pressed for correct time to trigger short press event
           shortPressFlag = true;
         }
         buttonDebouncedState = false;
-        loopCtrl = 0; //go back to state 0
+        button_loop_ctrl = 0; //go back to state 0
       }
-      else if(counter >= BUTTON_LONGPRESS_CYCLES){
+      else if(button_counter >= BUTTON_LONGPRESS_CYCLES){
         longPressFlag = true;
-        loopCtrl = 3;
+        button_loop_ctrl = 3;
       }
       break;
-
     case 3: //waiting for button release after long press duration
       if(!get_button_state()){ //go to state 0 when button released
         buttonDebouncedState = false;
-        loopCtrl = 0;
+        button_loop_ctrl = 0;
       }
-      else if(counter >= BUTTON_SUPERLONG_CYCLES){
-        buttonDebouncedState = false;
+      else if(button_counter >= BUTTON_SUPERLONG_CYCLES){
         superLongPressFlag = true;
-        counter = 0;
+        button_loop_ctrl = 4;
       }
       break;
+    case 4: //waiting for release after superlong press
+      if(!get_button_state()) {
+        buttonDebouncedState = false;
+        button_loop_ctrl = 0;
+      }
   }
-  counter++;
+  button_counter++;
 }
 
 bool Hardware::is_button_shortpress() {
@@ -592,7 +519,7 @@ bool Hardware::is_htr_det_on() {
 }
 
 void Hardware::clear_button_flags() {
-  //clear both flags
+  //clear flags
   is_button_shortpress();
   is_button_longpress();
   is_button_superlongpress();
@@ -618,7 +545,6 @@ uint32_t Hardware::get_confirm_SOC_request_meas_time() {
 void Hardware::SOC_handler(bool reset) {
   //check if battery is unloaded and divider is ON and settled and run SOC state machine. request unloading if SOC data is old.
   //things to check: pwrmos OFF ; not charging ; divider ON ; enough time from divider ON ; enough time from pwrmos OFF ; BAT_DIV_TCONST from last request
-  static uint32_t lastSOCcalc = 0;
 
   uint32_t timeNow = HAL_GetTick();
 
@@ -634,10 +560,59 @@ void Hardware::SOC_handler(bool reset) {
       && is_vbat_sply_on()
       && timeNow - last_divider_enable > BAT_DIV_TCONST
       && timeNow - last_pwrmos_flip > BAT_DIV_TCONST
-      && timeNow - request_SOC_meas_confirm_time > BAT_DIV_TCONST){
+      && timeNow - request_SOC_meas_confirm_time > BAT_DIV_TCONST)
+    {
 
     //run soc state machine
-    SOC_val = calculate_SOC();
+    uint16_t voltage = get_vbat();
+    switch (soc_loop_ctrl){
+
+      case 0: //SOC_DEAD
+        if(voltage > soc_thr[4]){
+          soc_loop_ctrl = 1;
+          SOC_val = SOC_0to10;
+        }
+        break;
+
+      case 1: //SOC_0to10
+        if(voltage < soc_thr[3]){
+          soc_loop_ctrl = 0;
+          SOC_val = SOC_DEAD;
+        }
+        else if(voltage > soc_thr[0]+SOC_HYST){
+          soc_loop_ctrl = 2;
+          SOC_val = SOC_10to40;
+        }
+        break;
+
+      case 2: //SOC_10to40
+        if(voltage < soc_thr[0]){
+          soc_loop_ctrl = 1;
+          SOC_val = SOC_0to10;
+        }
+        else if(voltage > soc_thr[1]+SOC_HYST){
+          soc_loop_ctrl = 3;
+          SOC_val = SOC_40to70;
+        }
+        break;
+
+      case 3: //SOC_40to70
+        if(voltage < soc_thr[1]){
+          soc_loop_ctrl = 2;
+          SOC_val = SOC_10to40;
+        }
+        else if(voltage > soc_thr[2]+SOC_HYST){
+          soc_loop_ctrl = 4;
+          SOC_val = SOC_70to100;
+        }
+        break;
+      case 4: //SOC_70to100
+        if(voltage < soc_thr[2]){
+          soc_loop_ctrl = 3;
+          SOC_val = SOC_40to70;
+        }
+        break;
+    }
     lastSOCcalc = timeNow;
   }
 }
@@ -649,5 +624,3 @@ void Hardware::analog_handler(bool reset) {
     }
   }
 }
-
-
