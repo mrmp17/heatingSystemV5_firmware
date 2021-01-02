@@ -49,7 +49,7 @@
 #define SOC_70to100 3
 #define SOC_DEAD 4
 #define SOC_HYST 25 //mV
-#define BAT_DIV_TCONST 60 //RC filter on battery divider takes 60ms to settle
+#define BAT_DIV_TCONST 160 //RC filter on battery divider takes 160ms to settle (tau = 24ms)
 #define SOC_MAX_INTERVAL 10000 //SOC handler requests SOC measurement conditions after this many ms
 #define SOC_RTC_NUM 10 //allow some idle time for SOC measurement every __ RTC events
 
