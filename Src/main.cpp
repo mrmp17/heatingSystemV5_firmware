@@ -121,7 +121,6 @@ void stateMachine(){
       }
       break;
 
-
     case 1: //wakeup from RTC state
       // state actions:       #####
 
@@ -133,7 +132,7 @@ void stateMachine(){
         hardware.trace(loopCtrl);
       }
       else if(RTC_wake_counter % SOC_RTC_NUM == 0 && HAL_GetTick() - stateTransitionTime < 3*BAT_DIV_TCONST){
-        //nothing to do, just wait to let SOC hanlder measure battery
+        //nothing to do, just wait to let SOC handler measure battery
       }
       else if(hardware.get_SOC() == SOC_DEAD){
         loopCtrl = 3; //to low bat sleep
@@ -145,9 +144,7 @@ void stateMachine(){
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
-
       break;
-
 
     case 2: //wakeup from button state
       // state actions:       #####
@@ -186,7 +183,6 @@ void stateMachine(){
       }
       break;
 
-
     case 3: //battery dead sleep state
       // state actions:       #####
       hardware.sleep();
@@ -219,52 +215,31 @@ void stateMachine(){
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
-
-
       break;
+
     case 5: //wait for valid heater connection
-      static uint32_t portNotEmptyTime = 0; //warning, this is accessible in all switch cases!
       // state actions:       #####
       leds.stop_blink();
 
       // state flowControl    #####
       if(hardware.chrg_pgd()){ //power supply connected
-        portNotEmptyTime = 0;
         blinkBattery();
         loopCtrl = 10;
+        hardware.set_htr_det(false);
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
       else if(hardware.is_htr_connected()){
-        portNotEmptyTime = 0;
         loopCtrl = 8; //go to medium heating
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
-      else if(hardware.is_port_empty()){
-        portNotEmptyTime = 0;
-        if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
-          blinkBattery();
-          loopCtrl = 10;
-          hardware.set_htr_det(false);
-          stateTransitionTime = HAL_GetTick();
-          hardware.clear_button_flags();
-          hardware.trace(loopCtrl);
-        }
-        //else nothing to do, just wait
-      }
-      else if(portNotEmptyTime == 0){
-        portNotEmptyTime = HAL_GetTick();
-      }
-      else if(HAL_GetTick() - portNotEmptyTime > PORT_NOT_EMPTY_WAIT){
-        //something that is not heater is connected even after waiting for PORT_NOT_EMPTY_WAIT time, ABORT
-        //hardware.debug_print("abort\n");
-        portNotEmptyTime = 0;
-        hardware.set_htr_det(false);
+      else if(HAL_GetTick() - stateTransitionTime > WAIT_HEATER_TIMEOUT){
         blinkBattery();
         loopCtrl = 10;
+        hardware.set_htr_det(false);
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
@@ -280,10 +255,7 @@ void stateMachine(){
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
-
-
       break;
-
 
     case 7: //low heating
       // state actions:       #####
@@ -377,9 +349,7 @@ void stateMachine(){
         stateTransitionTime = HAL_GetTick();
         hardware.trace(loopCtrl);
       }
-
       break;
-
 
     case 9: //high heating
       // state actions:       #####
@@ -471,7 +441,6 @@ void stateMachine(){
           break;
       }
 
-
       if(hardware.is_sply_5V3A()){
         hardware.set_max_input_cur();
       }
@@ -480,7 +449,7 @@ void stateMachine(){
       }
 
       // state flowControl    #####
-      if(hardware.is_SOC_request_meas()){ //cant go form this state if request is active
+      if(hardware.is_SOC_request_meas()){ //cant go from this state if request is active
         hardware.set_charging(false);
         hardware.confirm_SOC_request_meas();
         loopCtrl = 14;
@@ -502,15 +471,13 @@ void stateMachine(){
         hardware.clear_button_flags();
         hardware.trace(loopCtrl);
       }
-
-
       break;
-    case 12:
+
+      case 12:
       // state actions:       #####
       leds.solid_on(0);
       leds.solid_on(1);
       leds.solid_on(2);
-
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
@@ -682,7 +649,7 @@ int main(void)
     if(cnt%300 == 0 && true){
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
-      hardware.debug_print("V:%d S:%d\n", hardware.vbat_compensated, hardware.get_SOC());
+//      hardware.debug_print("V:%d S:%d\n", hardware.vbat_compensated, hardware.get_SOC());
       cnt++;
     }
 
@@ -704,7 +671,7 @@ int main(void)
 //    }
 
 
-    stateMachine();
+    stateMachine(); // TODO: good idea to call state machine faster than handlers?
 
 
 
