@@ -33,6 +33,8 @@ void Hardware::init() {
   set_button_sply(true); //enable button supply (can remain on all the time - no vampire drain)
   set_pwr_mosfet(false); //disable pwr mosfet just in case
   start_ADC(); //start ADC sampling
+  HAL_Delay(BAT_DIV_TCONST);
+  analog_handler(true);
 }
 
 void Hardware::set_pwr_mosfet(bool state) {
@@ -617,10 +619,17 @@ void Hardware::SOC_handler(bool reset) {
   }
 }
 
-void Hardware::analog_handler(bool reset) {
-  if(HAL_GetTick() - led_flip_time > BAT_DIV_TCONST){
+void Hardware::analog_handler(bool reset) { //reset true forces value loading
+  uint32_t time = HAL_GetTick();
+  if(time - led_flip_time > BAT_DIV_TCONST || reset){
     for(uint8_t n = 0 ; n<ADC_NUM_CH ; n++){
       valid_raw_ADC[n] = ADC_buffer[n];
     }
+  }
+  if(time - last_ADC_calib_time > ADC_CALIB_PERIOD){
+    //restarts ADC to calibrate it. Reduces error caused by temperature changes
+    stop_ADC();
+    start_ADC();
+    last_ADC_calib_time = time;
   }
 }

@@ -13,6 +13,11 @@
 #include "gpio.h"
 #include "rtc.h"
 
+
+#define FW_version "V1.0"
+
+
+
 #define STATE_TRACE true
 #define ENABLE_SLEEP true
 
@@ -34,6 +39,8 @@
 #define ADC_VBAT 2
 #define ADC_UDP 3
 #define ADC_VREF 4
+
+#define ADC_CALIB_PERIOD 300000L //calibrate ADC every 5 minutes (compensates for temperature changes)
 
 #define V5V3A_LCC_MAX 100 //max voltage at CC pin that should be unconnected (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
@@ -59,16 +66,16 @@
 #define WAKE_SOURCE_BTN 0
 #define WAKE_SOURCE_RTC 1
 #define RTC_TICKS_PER_S 2313
-#define RTC_WAKE_TIME 4000
+#define RTC_WAKE_TIME 6000
 
 #define CHRG_STAT_IDLE 0
 #define CHRG_STAT_CHARGING 1
 #define CHRG_STAT_ERROR 2
 
 //heating power defines
-#define HEAT_LOW 1350 //mW
-#define HEAT_MED 1900 //mW
-#define HEAT_HIGH 2400 //mW
+#define HEAT_LOW 1250 //mW
+#define HEAT_MED 1800 //mW
+#define HEAT_HIGH 2300 //mW
 #define HEAT_MAX 3500 //mW use only to preheat. not possible at low battery voltages
 
 //cycles correspond to time between handler calls
@@ -207,6 +214,8 @@ private:
     bool superLongPressFlag = false;
     bool buttonDebouncedState = false;
     bool *btn_int_flag_pointer;
+
+    uint32_t last_ADC_calib_time = 0;
 
 };
 

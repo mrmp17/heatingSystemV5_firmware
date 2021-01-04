@@ -570,9 +570,16 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_Delay(5000);
+  HAL_Delay(2000);
 
   hardware.init();
+  HAL_Delay(100);
+  hardware.debug_print("###### FeatHeet by Planinsek industries. ######\n");
+  hardware.debug_print("MCU: STM32L051K8U6, Vcc=2.5V\n");
+  hardware.debug_print("Booting firmware version ");
+  hardware.debug_print(FW_version);
+  hardware.debug_print(" ........\n");
+
 
   hardware.led_ctrl(0, true);
   HAL_Delay(50);
@@ -581,6 +588,12 @@ int main(void)
   hardware.led_ctrl(0, true);
   HAL_Delay(50);
   hardware.led_ctrl(0, false);
+
+  HAL_Delay(200);
+  hardware.debug_print("OK\n");
+  hardware.debug_print("Battery voltage: %d mV\n", hardware.get_vbat());
+  hardware.debug_print("Starting normal operation. Your feet shall never be cold again.\n");
+  hardware.debug_print("###############\n\n");
 
   HAL_Delay(100);
 //  hardware.led_ctrl(2, true);
