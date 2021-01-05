@@ -151,6 +151,7 @@ void stateMachine(){
 
       // state flowControl    #####
       if(hardware.chrg_pgd()){
+        hardware.set_charging(true);
         loopCtrl = 11; //go charging
         stateTransitionTime = HAL_GetTick();
         hardware.clear_button_flags();
@@ -481,6 +482,7 @@ void stateMachine(){
 
       // state flowControl    #####
       if(!hardware.chrg_pgd()){ //charger disconnected
+        hardware.set_charging(false); //disable again, just in case
         hardware.set_default_input_cur();
         blinkBattery();
         loopCtrl = 10;
@@ -623,6 +625,7 @@ int main(void)
   while (1)
   {
     static uint32_t timing = 0;
+    static uint32_t state_machine_timing = 0;
     static uint32_t cnt = 0;
 
     //start testing
@@ -683,8 +686,11 @@ int main(void)
 //      leds.solid_on(2);
 //    }
 
+    if(HAL_GetTick() - state_machine_timing >= STATE_MACHINE_PERIOD){
+      state_machine_timing = HAL_GetTick();
+      stateMachine(); //
+    }
 
-    stateMachine(); // TODO: good idea to call state machine faster than handlers?
 
 
 

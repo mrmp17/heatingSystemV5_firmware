@@ -14,7 +14,7 @@
 #include "rtc.h"
 
 
-#define FW_version "V1.0"
+#define FW_version "V1.0x" //x means not final version release
 
 
 
@@ -24,6 +24,7 @@
 #define ADC_NUM_CH 5
 
 #define HANDLER_PERIOD 20
+#define STATE_MACHINE_PERIOD 80
 
 #define ADC_MAX_VAL 4095
 #define ADC_REF 2500
