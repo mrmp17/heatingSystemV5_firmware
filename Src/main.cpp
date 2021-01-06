@@ -74,15 +74,22 @@ Indicator leds(&hardware);
 void blinkBattery(){
   switch(hardware.get_SOC()){
     case SOC_DEAD:
+      leds.solid_off(0);
+      leds.solid_off(1);
       leds.single(2, false, true);
       break;
     case SOC_0to10:
+      leds.solid_off(0);
+      leds.solid_off(1);
       leds.single(2, true, false);
       break;
     case SOC_10to40:
+      leds.solid_off(0);
+      leds.solid_off(1);
       leds.single(2, false, false);
       break;
     case SOC_40to70:
+      leds.solid_off(0);
       leds.single(2, false, false);
       leds.single(1, false, false);
       break;
@@ -432,13 +439,13 @@ void stateMachine(){
           break;
         case SOC_40to70:
           leds.solid_off(0);
-          leds.slow_blink(2);
           leds.slow_blink(1);
+          leds.slow_blink(2);
           break;
         case SOC_70to100:
-          leds.slow_blink(2);
-          leds.slow_blink(1);
           leds.slow_blink(0);
+          leds.slow_blink(1);
+          leds.slow_blink(2);
           break;
       }
 

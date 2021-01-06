@@ -14,7 +14,7 @@
 #include "rtc.h"
 
 
-#define FW_version "V1.0x" //x means not final version release
+#define FW_version "V1.1" //x means not final version release
 
 
 
