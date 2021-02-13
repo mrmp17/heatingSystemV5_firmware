@@ -669,7 +669,8 @@ int main(void)
         HAL_NVIC_SystemReset();
       }
     }
-    if(cnt%300 == 0 && true){
+    if(cnt%30 == 0 && true){
+      hardware.debug_print("VUP: %d\n", hardware.get_UDP_volt());
       //hardware.debug_print("B: %d mV\n", hardware.get_vbat());
       //hardware.debug_print("SOC: %d\n", hardware.get_SOC());
 //      hardware.debug_print("V:%d S:%d\n", hardware.vbat_compensated, hardware.get_SOC());

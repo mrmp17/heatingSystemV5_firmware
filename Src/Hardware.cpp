@@ -199,7 +199,9 @@ bool Hardware::is_htr_connected() {
   //D+ voltage sould be VCC/2 = 1250mV +-8%: 1188mV to 1313mV
   //both cc pins should be floaty
   uint16_t dpVolt = get_UDP_volt();
-  return (get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() < PORT_EMPTY_CCMAX && (dpVolt > UDP_HTR_MIN && dpVolt < UDP_HTR_MAX));
+  //return (get_CC1_volt() < PORT_EMPTY_CCMAX && get_CC2_volt() < PORT_EMPTY_CCMAX && (dpVolt > UDP_HTR_MIN && dpVolt < UDP_HTR_MAX));
+  return ((dpVolt > UDP_HTR_MIN && dpVolt < UDP_HTR_MAX));
+  //since version 1.2 we ignore voltage on CC pins as they are floating (water in connector caused false negative readings)
 }
 
 uint16_t Hardware::rel_htr_pwr(uint16_t power_mw) {

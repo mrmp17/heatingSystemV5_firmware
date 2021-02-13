@@ -14,7 +14,7 @@
 #include "rtc.h"
 
 
-#define FW_version "V1.1" //x means not final version release
+#define FW_version "V1.2" //x means not final version release
 
 
 
@@ -47,8 +47,11 @@
 #define V5V3A_HCC_MIN 1515 //min voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define V5V3A_HCC_MAX 1818 //max voltage at CC pin that should be pulled up by source (when detecting 5V 3A adapter)
 #define PORT_EMPTY_CCMAX 50 //alow max 50mV on CC pins to detect empty connetor
-#define UDP_HTR_MIN 1188 //USB data+ pin range min for heater detection
-#define UDP_HTR_MAX 1313 //USB data+ pin range max for heater detection
+
+//window increased in version 1.2
+#define UDP_HTR_MIN 1140 //USB data+ pin range min for heater detection
+#define UDP_HTR_MAX 1380 //USB data+ pin range max for heater detection
+
 
 //bat SOC definitions
 #define SOC_0to10 0

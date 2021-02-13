@@ -11,10 +11,10 @@
 
 #define NUM_LEDS 3
 
-#define SLOW_ON 500
-#define SLOW_OFF 1000
-#define FAST_ON 100
-#define FAST_OFF 100
+#define SLOW_ON 600
+#define SLOW_OFF 1100
+#define FAST_ON 140
+#define FAST_OFF 200
 
 #define SINGLE_PRE 400
 #define SINGLE_ON 1500
